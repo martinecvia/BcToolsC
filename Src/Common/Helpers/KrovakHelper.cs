@@ -3,102 +3,240 @@ using System; // Keep for .NET 4.6
 
 namespace BcToolsC.Helpers
 {
+    // https://www.geospeleos.com/Mapovani/Transformace/WGS_JTSK.pdf
     public static class KrovakHelper
     {
-        public readonly struct WGS84 : IEquatable<WGS84>
+        public readonly struct SJTSK : IEquatable<SJTSK> 
         {
-            public double Lon { get; }
-            public double Lat { get; }
-
-            public WGS84(double lon, double lat)
+            public double X { get; }
+            public string sX { get; }
+            public double Y { get; }
+            public string sY { get; }
+            public SJTSK(double x, double y)
             {
-                Lon = lon;
-                Lat = lat;
+                X = x; Y = y;
+                sX = string.Format("{0}m", x);
+                sY = string.Format("{0}m", y);
             }
 
-            public void Deconstruct(out double lon, out double lat)
+            public void Deconstruct(out double x, out double y)
             {
-                lon = Lon;
-                lat = Lat;
+                x = X; y = Y;
+            }
+            public bool Equals(SJTSK other) =>
+                X.Equals(other.X) && Y.Equals(other.Y);
+
+            public override bool Equals(object obj) =>
+                obj is SJTSK other && Equals(other);
+
+            public override int GetHashCode() =>
+                X.GetHashCode() ^ Y.GetHashCode();
+
+            public static bool operator ==(SJTSK left, SJTSK right) => left.Equals(right);
+            public static bool operator !=(SJTSK left, SJTSK right) => !left.Equals(right);
+
+            public override string ToString() => $"X={X}, Y={Y}";
+        }
+
+        public readonly struct WGS84 : IEquatable<WGS84>
+        {
+            public double L { get; }
+            public string sL { get; }
+            public double B { get; }
+            public string sB { get; }
+            public double H { get; }
+
+            public WGS84(double b, double l, double h)
+            {
+                B = b; L = l; H = h;
+                string vB = "N";
+                if (B < 0)
+                {
+                    B = -B;
+                    vB = "S";
+                }
+                double degB = Math.Floor(B);
+                double tmpB = (B - degB) * 60;
+                double minB = Math.Floor(tmpB);
+                double secB = Math.Round((tmpB - minB) * 60, 3);
+                sB = string.Format("{0}°{1}'{2}{3}", degB, minB, secB, vB);
+                string vL = "E";
+                if (L < 0)
+                {
+                    L = -L;
+                    vL = "W";
+                }
+                double degL = Math.Floor(L);
+                double tmpL = (L - degL) * 60;
+                double minL = Math.Floor(tmpL);
+                double secL = Math.Round((tmpL - minL) * 60, 3);
+                sL = string.Format("{0}°{1}'{2}{3}", degL, minL, secL, vL);
+            }
+
+            public void Deconstruct(out double b, out double l, out double h)
+            {
+                b = B; l = L; h = H;
             }
 
             public bool Equals(WGS84 other) =>
-                Lon.Equals(other.Lon) && Lat.Equals(other.Lat);
+                B.Equals(other.B) && L.Equals(other.L) && H.Equals(other.H);
 
             public override bool Equals(object obj) =>
                 obj is WGS84 other && Equals(other);
 
             public override int GetHashCode() =>
-                Lon.GetHashCode() ^ Lat.GetHashCode();
+                B.GetHashCode() ^ L.GetHashCode() ^ H.GetHashCode();
 
             public static bool operator ==(WGS84 left, WGS84 right) => left.Equals(right);
             public static bool operator !=(WGS84 left, WGS84 right) => !left.Equals(right);
 
-            public override string ToString() => $"Lon={Lon}, Lat={Lat}";
+            public override string ToString() => $"Lat={B}, Lon={L}, H={H}";
         }
 
-        public static 
-        WGS84
-        JTSK2WGS84(double X, double Y, 
-        double Height = 267)
-        {
-            Assert.IsNotNull(X, nameof(X));
-            Assert.IsNotNull(Y, nameof(Y));
-            Assert.IsNotNull(Height, nameof(Height));
+        const double e = 0.081696831215303;
+        const double n = 0.97992470462083;
+        const double konst_u_ro = 12310230.12797036;
+        const double alfa = 1.000597498371542;
+        const double sU = 0.863499969506341;
+        const double cU = 0.504348889819882;
+        const double sV = 0.420215144586493;
+        const double cV = 0.907424504992097;
+        const double k = 1.003419163966575;
+        const double m = 3.543e-6;
 
-            var X_JTSK = Math.Abs(Y); // Always, rotated because of rotation of XY
-            var Y_JTSK = Math.Abs(X); // Always, rotated because of rotation of XY
-            double ro = Math.Sqrt(X_JTSK * X_JTSK + Y_JTSK * Y_JTSK);
-            double epislon = 2 * Math.Atan2(Y_JTSK, ro + X_JTSK);
-            double Upper = epislon / 0.97992470462083;
-            double Lower = 2 * Math.Atan(Math.Exp(1 / 0.97992470462083 * Math.Log(12310230.12797036 / ro))) - Math.PI / 2;
-            double cos_Lower = Math.Cos(Lower);
-            double sin_Upper = 0.863499969506341 * Math.Sin(Lower) - 0.504348889819882 * cos_Lower * Math.Cos(Upper);
-            double cos_Upper = Math.Sqrt(1 - sin_Upper * sin_Upper);
-            double sin_DownVertical = Math.Sin(Upper) * cos_Lower / cos_Upper;
-            double cos_DownVertical = Math.Sqrt(1 - sin_DownVertical * sin_DownVertical);
-            var tan = Math.Exp(2 / 1.000597498371542 * Math.Log((1 + sin_Upper) / cos_Upper / 1.003419163966575));
-            var pom = (tan - 1) / (tan + 1);
-            double sin_Beta;
+        public static
+        SJTSK WGS84_SJTSK(WGS84 wG, double H = 245) => WGS84_SJTSK(wG.B, wG.L, H); 
+
+        public static 
+        SJTSK WGS84_SJTSK(double B, double L, 
+            double H = 245)
+        {
+            double ro, t, a, f, e2;
+            double db = Math.Abs(B) * Math.PI / 180.0;
+            double dl = Math.Abs(L) * Math.PI / 180.0;
+            // https://blog.zvestov.cz/software%20development/2008/08/29/prevod-wgs84-do-s-jtsk
+            // Pravoúhlé souøadnice S-JTSK
+            double qx = -570.69, qy = -85.69, qz = -462.84;
+            double wx = 4.99821 / 3600.0 * Math.PI / 180.0;
+            double wy = 1.58676 / 3600.0 * Math.PI / 180.0;
+            double wz = 5.26110 / 3600.0 * Math.PI / 180.0;
+            double dh = Math.Max(0, Math.Abs(H) - 45);
+            a = 6378137.0;
+            f = 298.257223563;
+            e2 = 1 - (1 - 1 / f) * (1 - 1 / f);
+            double sinB = Math.Sin(db);
+            ro = a / Math.Sqrt(1 - e2 * sinB * sinB);
+            // Transformace na WGS-84
+            double x = (ro + dh) * Math.Cos(db) * Math.Cos(dl);
+            double y = (ro + dh) * Math.Cos(db) * Math.Sin(dl);
+            double z = ((1 - e2) * ro + dh) * sinB;
+            double xn = qx + (1 + m) * (x + wz * y - wy * z);
+            double yn = qy + (1 + m) * (-wz * x + y + wx * z);
+            double zn = qz + (1 + m) * (wy * x - wx * y + z);
+            // Pravoúhlé souøadnice S-JTSK
+            a = 6377397.15508;
+            f = 299.152812853;
+            e2 = 1 - (1 - 1 / f) * (1 - 1 / f);
+            double b = f / (f - 1);
+            double p = Math.Sqrt(xn * xn + yn * yn);
+            double theta = Math.Atan((zn * b) / p);
+            double st = Math.Sin(theta);
+            double ct = Math.Cos(theta);
+            t = (zn + e2 * b * a * st * st * st) /
+                (p - e2 * a * ct * ct * ct);
+            double Bjtsk = Math.Atan(t);
+            double Ljtsk = 2 * Math.Atan(yn / (p + xn));
+            sinB = Math.Sin(Bjtsk);
+            t = (1 - e * sinB) / (1 + e * sinB);
+            t = Math.Pow(1 + sinB, 2) / (1 - sinB * sinB) * Math.Exp(e * Math.Log(t));
+            t = 1.00685001861538 * Math.Exp(alfa * Math.Log(t));
+            double sinU = (t - 1) / (t + 1);
+            double cosU = Math.Sqrt(1 - sinU * sinU);
+            double V = alfa * Ljtsk;
+            double sinV = Math.Sin(V);
+            double cosV = Math.Cos(V);
+            double cosDV = cV * cosV + sV * sinV;
+            double sinDV = sV * cosV - cV * sinV;
+            double sinS = sU * sinU + cU * cosU * cosDV;
+            double cosS = Math.Sqrt(1 - sinS * sinS);
+            double sinD = sinDV * cosU / cosS;
+            double cosD = Math.Sqrt(1 - sinD * sinD);
+            double epsilon = n * Math.Atan(sinD / cosD);
+            ro = 12310230.12797036 * Math.Exp(-n * Math.Log((1 + sinS) / cosS));
+            x = ro * Math.Cos(epsilon);
+            y = ro * Math.Sin(epsilon);
+            return new SJTSK(x, y);
+        }
+
+        public static
+        WGS84 SJTSK_WGS84(SJTSK sJ, double H = 200) => SJTSK_WGS84(sJ.X, sJ.Y, H);
+
+        public static
+        WGS84 SJTSK_WGS84(double X, double Y, 
+            double H = 200)
+        {
+            double ro, t, a, f, e2;
+            double dx = Math.Abs(X);
+            double dy = Math.Abs(Y);
+            double dh = Math.Abs(H) + 45;
+            ro = Math.Sqrt(dx * dx + dy * dy);
+            double epislon = 2 * Math.Atan2(dy, ro + dx);
+            double D = epislon / n;
+            // Sférická šíøka
+            double S = 2 * Math.Atan(Math.Exp((1.0 / n) * Math.Log(konst_u_ro / ro))) - Math.PI / 2;
+            double sinS = Math.Sin(S);
+            double cosS = Math.Cos(S);
+            double sinU = sU * sinS - cU * cosS * Math.Cos(D);
+            double cosU = Math.Sqrt(1 - sinU * sinU);
+            double sinDV = Math.Sin(D) * cosS / cosU;
+            double cosDV = Math.Sqrt(1 - sinDV * sinDV);
+            double sinV = sV * cosDV - cV * sinDV;
+            double cosV = cV * cosDV + sV * sinDV;
+            t = Math.Exp((2.0 / alfa) * Math.Log((1 + sinU) / (cosU * k)));
+            double pom = (t - 1) / (t + 1);
+            double sinB;
             do
             {
-                sin_Beta = pom;
-                pom = tan * Math.Exp(0.081696831215303 * Math.Log((1 + 0.081696831215303 * sin_Beta) / (1 - 0.081696831215303 * sin_Beta)));
+                sinB = pom;
+                pom = t * Math.Exp(e * Math.Log((1 + e * sinB) / (1 - e * sinB)));
                 pom = (pom - 1) / (pom + 1);
             }
-            while (Math.Abs(pom - sin_Beta) > 1e-15);
-            var L_JTSK = 2 * Math.Atan(
-                (0.420215144586493 * cos_DownVertical - 0.907424504992097 * sin_DownVertical) / (1 + (0.907424504992097 * cos_DownVertical + 0.420215144586493 * sin_DownVertical))
-            ) / 1.000597498371542;
-            var R_JTSK = Math.Atan(pom / Math.Sqrt(1 - pom * pom));
-
-            // Perpedicular coordinates S-JTSJ
-            var e1 = 1 - (1 - 1 / 299.152812853) * (1 - 1 / 299.152812853);
-            ro = 6377397.15508 / Math.Sqrt(1 - e1 * Math.Sin(R_JTSK) * Math.Sin(R_JTSK));
-            var x1 = (ro + Height) * Math.Cos(R_JTSK) * Math.Cos(L_JTSK);
-            var x_w = -4.99821 / 3600 * Math.PI / 180;
-            var y1 = (ro + Height) * Math.Cos(R_JTSK) * Math.Sin(L_JTSK);
-            var y_w = -1.58676 / 3600 * Math.PI / 180;
-            var z1 = ((1 - e1) * ro + Height) * Math.Sin(R_JTSK);
-            var z_w = -5.2611 / 3600 * Math.PI / 180;
-
-            // Perpedicular coordinates WGS-84
-            var x2 = 570.69 + (1 + 3.543e-6) * (x1 + z_w * y1 - y_w * z1);
-            var y2 = 85.69 + (1 + 3.543e-6) * (-z_w * x1 + y1 + x_w * z1);
-            var z2 = 462.84 + (1 + 3.543e-6) * (y_w * x1 - x_w * y1 + z1);
-
-            // Geodetic coordinates for WGS84
-            var a = 298.257223563 / (298.257223563 - 1);
-            var p = Math.Sqrt(x2 * x2 + y2 * y2);
-            var e2 = 1 - (1 - 1 / 298.257223563) * (1 - 1 / 298.257223563);
-            var theta = Math.Atan(z2 * a / p);
-            var st = Math.Sin(theta);
-            var ct = Math.Cos(theta);
-            tan = (z2 + e2 * a * 6378137.0 * st * st * st) / (p - e2 * 6378137.0 * ct * ct * ct);
-
-            var lat = Math.Atan(tan) / Math.PI * 180;
-            var lon = 2 * Math.Atan(y2 / (p + x2)) / Math.PI * 180;
-            return new WGS84(lon, lat);
+            while (Math.Abs(pom - sinB) > 1e-15);
+            double _Ljtsk = 2 * Math.Atan2(sinV, 1 + cosV) / alfa;
+            double _Bjtsk = Math.Atan2(pom, Math.Sqrt(1 - pom * pom));
+            // Pravoúhlé souøadnice S-JTSK
+            a = 6377397.15508;
+            f = 299.152812853;
+            e2 = 1 - (1 - 1 / f) * (1 - 1 / f);
+            ro = a / Math.Sqrt(1 - e2 * Math.Sin(_Bjtsk) * Math.Sin(_Bjtsk));
+            double x = (ro + dh) * Math.Cos(_Bjtsk) * Math.Cos(_Ljtsk);
+            double y = (ro + dh) * Math.Cos(_Bjtsk) * Math.Sin(_Ljtsk);
+            double z = ((1 - e2) * ro + dh) * Math.Sin(_Bjtsk);
+            // Transformace na WGS-84
+            double qx = 570.69, qy = 85.69, qz = 462.84;
+            double wx = -4.99821 / 3600 * Math.PI / 180;
+            double wy = -1.58676 / 3600 * Math.PI / 180;
+            double wz = -5.26110 / 3600 * Math.PI / 180;
+            double xn = qx + (1 + m) * (x + wz * y - wy * z);
+            double yn = qy + (1 + m) * (-wz * x + y + wx * z);
+            double zn = qz + (1 + m) * (wy * x - wx * y + z);
+            // Geodetické souøadnice WGS-84
+            a = 6378137.0;
+            f = 298.257223563;
+            e2 = 1 - (1 - 1 / f) * (1 - 1 / f);
+            double b = f / (f - 1);
+            double p = Math.Sqrt(xn * xn + yn * yn);
+            double theta = Math.Atan((zn * b) / p);
+            double st = Math.Sin(theta);
+            double ct = Math.Cos(theta);
+            t = (zn + e2 * b * a * st * st * st) /
+                (p - e2 * a * ct * ct * ct);
+            double B = Math.Atan(t);
+            double L = 2 * Math.Atan2(yn, p + xn);
+            var h = Math.Sqrt(1 + t * t) * (p - a / Math.Sqrt(1 + (1 - e2) * t * t));
+            var l = L * 180 / Math.PI;
+            b = B * 180 / Math.PI;
+            return new WGS84(b, l, h);
         }
     }
 }

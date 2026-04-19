@@ -13,7 +13,7 @@ using AcDb = Autodesk.AutoCAD.DatabaseServices;
 #endif
 #endregion
 
-namespace BcToolsC
+namespace BcToolsC.BCad
 {
     public static class EditorExtensions
     {

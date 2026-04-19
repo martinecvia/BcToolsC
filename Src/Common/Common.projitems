@@ -15,8 +15,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)helpers\KrovakHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\FilePeekHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\ANGLE.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,26 +1,50 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+	<TargetFramework>net8.0-windows</TargetFramework>
+	<RootNamespace>BcToolsC</RootNamespace>
+	<ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+	<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+	<OutputType>Library</OutputType>
+	<UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	<GenerateAssemblyFileVersion>false</GenerateAssemblyFileVersion>
+	<GenerateAssemblyVersion>false</GenerateAssemblyVersion>
+	<GenerateAssemblyTitle>false</GenerateAssemblyTitle>
+	<GenerateAssemblyDescription>false</GenerateAssemblyDescription>
+	<GenerateAssemblyCompany>false</GenerateAssemblyCompany>
+	<GenerateAssemblyProduct>false</GenerateAssemblyProduct>
+	<GenerateAssemblyCopyright>false</GenerateAssemblyCopyright>
+	<GenerateAssemblyTrademark>false</GenerateAssemblyTrademark>
+	<AssemblyName>BcToolsAC25.0</AssemblyName>
   </PropertyGroup>
-
   <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
-
+  <Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />
   <ItemGroup>
     <Reference Include="accoremgd">
       <HintPath>..\..\CadReferences\2025\accoremgd.dll</HintPath>
-    </Reference>
+	  <Private>False</Private>
+	</Reference>
     <Reference Include="Acdbmgd">
       <HintPath>..\..\CadReferences\2025\acdbmgd.dll</HintPath>
-    </Reference>
+	  <Private>False</Private>
+	</Reference>
     <Reference Include="Acmgd">
       <HintPath>..\..\CadReferences\2025\acmgd.dll</HintPath>
-    </Reference>
+	  <Private>False</Private>
+	</Reference>
     <Reference Include="AdWindows">
       <HintPath>..\..\CadReferences\2025\AdWindows.dll</HintPath>
+      <Private>False</Private>
+	</Reference>
+    <Reference Include="Autodesk.AutoCAD.Interop">
+      <HintPath>..\..\CadReferences\2025\Autodesk.AutoCAD.Interop.dll</HintPath>
+    </Reference>
+    <Reference Include="Autodesk.AutoCAD.Interop.Common">
+      <HintPath>..\..\CadReferences\2025\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
     </Reference>
   </ItemGroup>
-
 </Project>
