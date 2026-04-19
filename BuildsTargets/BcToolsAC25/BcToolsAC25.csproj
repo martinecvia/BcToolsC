@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
+
+  <ItemGroup>
+    <Reference Include="accoremgd">
+      <HintPath>..\..\CadReferences\2025\accoremgd.dll</HintPath>
+    </Reference>
+    <Reference Include="Acdbmgd">
+      <HintPath>..\..\CadReferences\2025\acdbmgd.dll</HintPath>
+    </Reference>
+    <Reference Include="Acmgd">
+      <HintPath>..\..\CadReferences\2025\acmgd.dll</HintPath>
+    </Reference>
+    <Reference Include="AdWindows">
+      <HintPath>..\..\CadReferences\2025\AdWindows.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
