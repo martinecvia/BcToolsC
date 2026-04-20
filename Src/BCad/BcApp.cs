@@ -89,7 +89,7 @@ namespace BcToolsC.BCad
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +
                 "\n   Contact: Martin Coplák <martin.coplak@gmail.com>" +
                 "\n   Consult: Ing. Michal Kosòovský, Ph.D. <michal.kosnovsky@vut.cz>" +
-                "\n   Oponent: Ing. Jacek Wendrinski, Ph.D. <>" +
+                "\n   Oponent: Ing. Jacek Wendrinski, Ph.D. <jacek.wendrinski@viapont.cz>" +
                 "\n------------------------------------------" +
                 "\n   BcToolsC.NET Version: " + Version +
                 "\n==========================================\n");
