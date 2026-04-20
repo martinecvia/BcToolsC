@@ -14,4 +14,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\submodules\NetTopologySuite\src\NetTopologySuite\NetTopologySuite.csproj" />
+  </ItemGroup>
 </Project>

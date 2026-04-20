@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197 d17.13
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11612.150 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BcToolsC", "Src\Common\BcToolsC.shproj", "{722A50B8-8225-45F0-B14C-493935397047}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BCad", "Src\BCad\BCad.shproj", "{64F2A4E1-93EE-47D0-ACA0-5FE4AE48F69F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "BuildsTargets\UnitTest\UnitTest.csproj", "{71665693-6EA4-4ED7-A37B-A54D884EDD76}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetTopologySuite", "submodules\NetTopologySuite\src\NetTopologySuite\NetTopologySuite.csproj", "{B2929BD2-5409-0222-BA54-E6120CE64F1D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +33,10 @@ Global
 		{71665693-6EA4-4ED7-A37B-A54D884EDD76}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{71665693-6EA4-4ED7-A37B-A54D884EDD76}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{71665693-6EA4-4ED7-A37B-A54D884EDD76}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2929BD2-5409-0222-BA54-E6120CE64F1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2929BD2-5409-0222-BA54-E6120CE64F1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2929BD2-5409-0222-BA54-E6120CE64F1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2929BD2-5409-0222-BA54-E6120CE64F1D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

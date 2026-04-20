@@ -12,39 +12,45 @@ namespace BcToolsC.Helpers
             public string sX { get; }
             public double Y { get; }
             public string sY { get; }
-            public SJTSK(double x, double y)
+            public double H { get; }
+            public double Pos => H;
+
+            public SJTSK(double x, double y, double h)
             {
-                X = x; Y = y;
+                X = x; Y = y; H = h;
                 sX = string.Format("{0}m", x);
                 sY = string.Format("{0}m", y);
             }
 
-            public void Deconstruct(out double x, out double y)
+            public void Deconstruct(out double x, out double y, out double h)
             {
-                x = X; y = Y;
+                x = X; y = Y; h = H;
             }
             public bool Equals(SJTSK other) =>
-                X.Equals(other.X) && Y.Equals(other.Y);
+                X.Equals(other.X) && Y.Equals(other.Y) && H.Equals(other.H);
 
             public override bool Equals(object obj) =>
                 obj is SJTSK other && Equals(other);
 
             public override int GetHashCode() =>
-                X.GetHashCode() ^ Y.GetHashCode();
+                X.GetHashCode() ^ Y.GetHashCode() ^ H.GetHashCode();
 
-            public static bool operator ==(SJTSK left, SJTSK right) => left.Equals(right);
+            public static bool operator ==(SJTSK left, SJTSK right) =>  left.Equals(right);
             public static bool operator !=(SJTSK left, SJTSK right) => !left.Equals(right);
 
-            public override string ToString() => $"X={X}, Y={Y}";
+            public override string ToString() => $"X={X}, Y={Y}, H={H}";
         }
 
         public readonly struct WGS84 : IEquatable<WGS84>
         {
             public double L { get; }
+            public double Lon => L;
             public string sL { get; }
             public double B { get; }
+            public double Lat => B;
             public string sB { get; }
             public double H { get; }
+            public double Pos => H;
 
             public WGS84(double b, double l, double h)
             {
@@ -90,7 +96,7 @@ namespace BcToolsC.Helpers
             public static bool operator ==(WGS84 left, WGS84 right) => left.Equals(right);
             public static bool operator !=(WGS84 left, WGS84 right) => !left.Equals(right);
 
-            public override string ToString() => $"Lat={B}, Lon={L}, H={H}";
+            public override string ToString() => $"Lat={B}[{sB}], Lon={L}[{sL}], H={H}";
         }
 
         const double e = 0.081696831215303;
@@ -104,35 +110,41 @@ namespace BcToolsC.Helpers
         const double k = 1.003419163966575;
         const double m = 3.543e-6;
 
+        // Výška kvazigeoidu
+        const double zeta = 45.0;
+
         public static
-        SJTSK WGS84_SJTSK(WGS84 wG, double H = 245) => WGS84_SJTSK(wG.B, wG.L, H); 
+        SJTSK WGS84_SJTSK(WGS84 wG, double H = 245.0) => WGS84_SJTSK(wG.B, wG.L, H); 
 
         public static 
         SJTSK WGS84_SJTSK(double B, double L, 
-            double H = 245)
+            double H = 245.0)
         {
             double ro, t, a, f, e2;
             double db = Math.Abs(B) * Math.PI / 180.0;
             double dl = Math.Abs(L) * Math.PI / 180.0;
-            // https://blog.zvestov.cz/software%20development/2008/08/29/prevod-wgs84-do-s-jtsk
+            double dh = Math.Abs(H);
             // Pravoúhlé souøadnice S-JTSK
-            double qx = -570.69, qy = -85.69, qz = -462.84;
-            double wx = 4.99821 / 3600.0 * Math.PI / 180.0;
-            double wy = 1.58676 / 3600.0 * Math.PI / 180.0;
-            double wz = 5.26110 / 3600.0 * Math.PI / 180.0;
-            double dh = Math.Max(0, Math.Abs(H) - 45);
             a = 6378137.0;
             f = 298.257223563;
             e2 = 1 - (1 - 1 / f) * (1 - 1 / f);
             double sinB = Math.Sin(db);
             ro = a / Math.Sqrt(1 - e2 * sinB * sinB);
             // Transformace na WGS-84
+            double qx = 570.69, qy = 85.69, qz = 462.84;
+            double wx = 4.99821 / 3600.0 * Math.PI / 180.0;
+            double wy = 1.58676 / 3600.0 * Math.PI / 180.0;
+            double wz = 5.26110 / 3600.0 * Math.PI / 180.0;
             double x = (ro + dh) * Math.Cos(db) * Math.Cos(dl);
             double y = (ro + dh) * Math.Cos(db) * Math.Sin(dl);
             double z = ((1 - e2) * ro + dh) * sinB;
-            double xn = qx + (1 + m) * (x + wz * y - wy * z);
-            double yn = qy + (1 + m) * (-wz * x + y + wx * z);
-            double zn = qz + (1 + m) * (wy * x - wx * y + z);
+            double dx = x - qx;
+            double dy = y - qy;
+            double dz = z - qz;
+            double scale = 1.0 / (1.0 + m);
+            double xn = scale * (dx + wz * dy - wy * dz);
+            double yn = scale * (-wz * dx + dy + wx * dz);
+            double zn = scale * (wy * dx - wx * dy + dz);
             // Pravoúhlé souøadnice S-JTSK
             a = 6377397.15508;
             f = 299.152812853;
@@ -146,6 +158,7 @@ namespace BcToolsC.Helpers
                 (p - e2 * a * ct * ct * ct);
             double Bjtsk = Math.Atan(t);
             double Ljtsk = 2 * Math.Atan(yn / (p + xn));
+            double h = Math.Sqrt(1 + t * t) * (p - a / Math.Sqrt(1 + (1 - e2) * t * t));
             sinB = Math.Sin(Bjtsk);
             t = (1 - e * sinB) / (1 + e * sinB);
             t = Math.Pow(1 + sinB, 2) / (1 - sinB * sinB) * Math.Exp(e * Math.Log(t));
@@ -165,7 +178,8 @@ namespace BcToolsC.Helpers
             ro = 12310230.12797036 * Math.Exp(-n * Math.Log((1 + sinS) / cosS));
             x = ro * Math.Cos(epsilon);
             y = ro * Math.Sin(epsilon);
-            return new SJTSK(x, y);
+            h -= zeta;
+            return new SJTSK(x, y, h);
         }
 
         public static
@@ -178,7 +192,7 @@ namespace BcToolsC.Helpers
             double ro, t, a, f, e2;
             double dx = Math.Abs(X);
             double dy = Math.Abs(Y);
-            double dh = Math.Abs(H) + 45;
+            double dh = Math.Abs(H) + zeta;
             ro = Math.Sqrt(dx * dx + dy * dy);
             double epislon = 2 * Math.Atan2(dy, ro + dx);
             double D = epislon / n;
@@ -234,8 +248,8 @@ namespace BcToolsC.Helpers
             double B = Math.Atan(t);
             double L = 2 * Math.Atan2(yn, p + xn);
             var h = Math.Sqrt(1 + t * t) * (p - a / Math.Sqrt(1 + (1 - e2) * t * t));
-            var l = L * 180 / Math.PI;
-            b = B * 180 / Math.PI;
+            var l = L * 180.0 / Math.PI;
+            b = B * 180.0 / Math.PI;
             return new WGS84(b, l, h);
         }
     }
