@@ -6,6 +6,7 @@ using System.Text;
 using System.Runtime.Serialization.Json;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using System.Net;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -13,19 +14,18 @@ using AcApp = ZwSoft.ZwCAD.ApplicationServices;
 using AcRun = ZwSoft.ZwCAD.Runtime;
 using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Geometry;
+using ZwSoft.ZwCAD.Windows;
 #else
 using AcApp = Autodesk.AutoCAD.ApplicationServices;
 using AcRun = Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.Windows;
 #endif
 #endregion
 
 using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
-using System.Net;
-using System.Threading;
-using ZwSoft.ZwCAD.Windows;
 
 [assembly: AcRun.CommandClass(typeof(BcToolsC.BCad.Commands.ParcelCommands))]
 namespace BcToolsC.BCad.Commands
@@ -56,7 +56,7 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        [AcRun.CommandMethod("BCTOOLSC_DW_KN_PACELS")]
+        [AcRun.CommandMethod("BCTOOLSC_DW_KN")]
         public void _DownloadParcels()
         {
             AcApp.Document document = BcApp.Document;
@@ -75,6 +75,7 @@ namespace BcToolsC.BCad.Commands
                 {
                     string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
                         theme, wgs84.L, wgs84.B);
+                    editor.Debug(url);
                     string json = DownloadString(url);
                     response = Deserialize<Response_KM_KU>(json);
                 }
@@ -97,10 +98,12 @@ namespace BcToolsC.BCad.Commands
                 var __entry = GetKeywordFromPrompt(editor, "Výběr území", keywords.ToArray());
                 Response_KM_KU.KM_KU entry = response.Entries.FirstOrDefault(e => e.Name.Contains(__entry));
                 if (entry == null) goto user_closed_dialog;
-                OpenFileDialog dialog = new OpenFileDialog("Vyber místo uložení", "test", __theme, "Title2",
-                OpenFileDialog.OpenFileDialogFlags.DefaultIsFolder);
+                string fileName = Path.GetFileName(new Uri(entry.Link).LocalPath);
+                SaveFileDialog dialog = new SaveFileDialog("Vyber místo uložení", "fileName", __theme, "Vyberte místo uložení",
+                SaveFileDialog.SaveFileDialogFlags.DoNotTransferRemoteFiles);
                 if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) goto user_closed_dialog;
                 DownloadFile(entry.Link, dialog.Filename);
+                editor.Ok($"Soubor byl uložen: {dialog.Filename}");
             }
             return;
         no_data:
@@ -120,9 +123,9 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        void DownloadFile(string url, string lsPath)
+        void DownloadFile(string url, string lsPath, double timeout = 30.0)
         {
-            using (WebClient wc = new WebClient())
+            using (TimeoutedWebClient wc = new TimeoutedWebClient { Timeout = (int)timeout * 1000 })
             {
                 wc.Headers[HttpRequestHeader.UserAgent] =
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
