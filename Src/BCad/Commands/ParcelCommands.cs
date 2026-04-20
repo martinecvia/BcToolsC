@@ -48,10 +48,9 @@ namespace BcToolsC.BCad.Commands
             public List<KM_KU> Entries { get; set; }
             [DataContract] public class KM_KU
             {
-                [DataMember(Name = "id")]
+                [DataMember(Name = "id", IsRequired = true)]
                 public string Link { get; set; }
-
-                [DataMember(Name = "title")]
+                [DataMember(Name = "title", IsRequired = true)]
                 public string Name { get; set; }
             }
         }

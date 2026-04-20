@@ -11,6 +11,8 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\ParcelCommands.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)commands\TiffCommands.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)commands\UcsCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
   </ItemGroup>
 </Project>
