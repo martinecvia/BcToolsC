@@ -8,7 +8,7 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace BcToolsC.Helpers
+namespace BcToolsC.Models
 {
     public class CommonOpenFileDialog
     {

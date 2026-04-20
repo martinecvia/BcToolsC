@@ -47,8 +47,10 @@ namespace BcToolsC.BCad
             Document document = Document
                 ?? throw new InvalidOperationException("not loaded yet!");
             Editor editor = document.Editor;
+            AllocConsole();
             try
             {
+                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
 #if !NET8_0_OR_GREATER
                 // Starší verze naèítají tuhle knihovnu u nìkterých funkcií, a je viditelný "zásek", proto to loadíme co nejdøíve
                 try { System.Reflection.Assembly.Load("Accessibility, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"); }

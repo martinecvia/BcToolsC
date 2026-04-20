@@ -100,7 +100,7 @@ namespace BcToolsC.Helpers
             public static bool operator ==(__4326 left, __4326 right) => left.Equals(right);
             public static bool operator !=(__4326 left, __4326 right) => !left.Equals(right);
 
-            public override string ToString() => $"Lat={B}[{sB}], Lon={L}[{sL}], H={H:0.00}";
+            public override string ToString() => $"B={B}[{sB}], L={L}[{sL}], H={H:0.00}";
         }
 
         const double e = 0.081696831215303;

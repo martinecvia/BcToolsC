@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\ParcelCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
   </ItemGroup>
 </Project>
