@@ -6,8 +6,10 @@ namespace BcToolsC.Helpers
     // https://www.geospeleos.com/Mapovani/Transformace/WGS_JTSK.pdf
     public static class KrovakHelper
     {
-        public readonly struct SJTSK : IEquatable<SJTSK> 
+        public readonly struct __5514 : IEquatable<__5514> 
         {
+            public string SRID => "SRID=5514";
+            public string EPSG => "EPSG:5514";
             public double X { get; }
             public string sX { get; }
             public double Y { get; }
@@ -15,34 +17,36 @@ namespace BcToolsC.Helpers
             public double H { get; }
             public double Pos => H;
 
-            public SJTSK(double x, double y, double h)
+            public __5514(double x, double y, double h)
             {
                 X = x; Y = y; H = h;
-                sX = string.Format("{0}m", x);
-                sY = string.Format("{0}m", y);
+                sX = string.Format("{0:0.00}m", x);
+                sY = string.Format("{0:0.00}m", y);
             }
 
             public void Deconstruct(out double x, out double y, out double h)
             {
                 x = X; y = Y; h = H;
             }
-            public bool Equals(SJTSK other) =>
+            public bool Equals(__5514 other) =>
                 X.Equals(other.X) && Y.Equals(other.Y) && H.Equals(other.H);
 
             public override bool Equals(object obj) =>
-                obj is SJTSK other && Equals(other);
+                obj is __5514 other && Equals(other);
 
             public override int GetHashCode() =>
                 X.GetHashCode() ^ Y.GetHashCode() ^ H.GetHashCode();
 
-            public static bool operator ==(SJTSK left, SJTSK right) =>  left.Equals(right);
-            public static bool operator !=(SJTSK left, SJTSK right) => !left.Equals(right);
+            public static bool operator ==(__5514 left, __5514 right) =>  left.Equals(right);
+            public static bool operator !=(__5514 left, __5514 right) => !left.Equals(right);
 
-            public override string ToString() => $"X={X}, Y={Y}, H={H}";
+            public override string ToString() => $"X={X}, Y={Y}, H={H:0.00}";
         }
 
-        public readonly struct WGS84 : IEquatable<WGS84>
+        public readonly struct __4326 : IEquatable<__4326>
         {
+            public string SRID => "SRID=4326";
+            public string EPSG => "EPSG:4326";
             public double L { get; }
             public double Lon => L;
             public string sL { get; }
@@ -52,7 +56,7 @@ namespace BcToolsC.Helpers
             public double H { get; }
             public double Pos => H;
 
-            public WGS84(double b, double l, double h)
+            public __4326(double b, double l, double h)
             {
                 B = b; L = l; H = h;
                 string vB = "N";
@@ -84,19 +88,19 @@ namespace BcToolsC.Helpers
                 b = B; l = L; h = H;
             }
 
-            public bool Equals(WGS84 other) =>
+            public bool Equals(__4326 other) =>
                 B.Equals(other.B) && L.Equals(other.L) && H.Equals(other.H);
 
             public override bool Equals(object obj) =>
-                obj is WGS84 other && Equals(other);
+                obj is __4326 other && Equals(other);
 
             public override int GetHashCode() =>
                 B.GetHashCode() ^ L.GetHashCode() ^ H.GetHashCode();
 
-            public static bool operator ==(WGS84 left, WGS84 right) => left.Equals(right);
-            public static bool operator !=(WGS84 left, WGS84 right) => !left.Equals(right);
+            public static bool operator ==(__4326 left, __4326 right) => left.Equals(right);
+            public static bool operator !=(__4326 left, __4326 right) => !left.Equals(right);
 
-            public override string ToString() => $"Lat={B}[{sB}], Lon={L}[{sL}], H={H}";
+            public override string ToString() => $"Lat={B}[{sB}], Lon={L}[{sL}], H={H:0.00}";
         }
 
         const double e = 0.081696831215303;
@@ -114,10 +118,10 @@ namespace BcToolsC.Helpers
         const double zeta = 45.0;
 
         public static
-        SJTSK WGS84_SJTSK(WGS84 wG, double H = 245.0) => WGS84_SJTSK(wG.B, wG.L, H); 
+        __5514 WGS84_SJTSK(__4326 epsg, double H = 245.0) => WGS84_SJTSK(epsg.B, epsg.L, H); 
 
-        public static 
-        SJTSK WGS84_SJTSK(double B, double L, 
+        public static
+        __5514 WGS84_SJTSK(double B, double L, 
             double H = 245.0)
         {
             double ro, t, a, f, e2;
@@ -176,17 +180,18 @@ namespace BcToolsC.Helpers
             double cosD = Math.Sqrt(1 - sinD * sinD);
             double epsilon = n * Math.Atan(sinD / cosD);
             ro = 12310230.12797036 * Math.Exp(-n * Math.Log((1 + sinS) / cosS));
-            x = ro * Math.Cos(epsilon);
-            y = ro * Math.Sin(epsilon);
+            x = Math.Truncate(ro * Math.Cos(epsilon) * 1E2) / 1E2;
+            y = Math.Truncate(ro * Math.Sin(epsilon) * 1E2) / 1E2;
             h -= zeta;
-            return new SJTSK(x, y, h);
+            h = Math.Round(h, 2, MidpointRounding.AwayFromZero);
+            return new __5514(x, y, h);
         }
 
         public static
-        WGS84 SJTSK_WGS84(SJTSK sJ, double H = 200) => SJTSK_WGS84(sJ.X, sJ.Y, H);
+        __4326 SJTSK_WGS84(__5514 epsg, double H = 200) => SJTSK_WGS84(epsg.X, epsg.Y, H);
 
         public static
-        WGS84 SJTSK_WGS84(double X, double Y, 
+        __4326 SJTSK_WGS84(double X, double Y, 
             double H = 200)
         {
             double ro, t, a, f, e2;
@@ -250,7 +255,10 @@ namespace BcToolsC.Helpers
             var h = Math.Sqrt(1 + t * t) * (p - a / Math.Sqrt(1 + (1 - e2) * t * t));
             var l = L * 180.0 / Math.PI;
             b = B * 180.0 / Math.PI;
-            return new WGS84(b, l, h);
+            b = Math.Truncate(b * 1E7) / 1E7;
+            l = Math.Truncate(l * 1E7) / 1E7;
+            h = Math.Round(h, 2, MidpointRounding.AwayFromZero);
+            return new __4326(b, l, h);
         }
     }
 }
