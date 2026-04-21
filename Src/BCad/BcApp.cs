@@ -3,6 +3,7 @@ using System; // Keep for .NET 4.6
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -26,6 +27,9 @@ using Autodesk.AutoCAD.EditorInput;
 #endif
 #endregion
 
+using BcToolsC.BCad.Commands;
+using BcToolsC.Models;
+
 [assembly: CommandClass(typeof(BcToolsC.BCad.BcApp))]
 namespace BcToolsC.BCad
 {
@@ -41,6 +45,9 @@ namespace BcToolsC.BCad
         public static bool IsAcad { get; private set; }
         public static Document Document => AcApp.Core.Application.DocumentManager.MdiActiveDocument;
         public static RXClass Entity = RXObject.GetClass(typeof(AcDb.Entity));
+        public static string CurrentDirectory => Document != null 
+            ? Path.GetDirectoryName(Document.Database.Filename)
+            : Path.GetTempPath();
 
         public void Initialize()
         {
@@ -84,8 +91,7 @@ namespace BcToolsC.BCad
                         editor.Error($"Získání informace o platformì selhalo; Výjimka: {exception}\n");
                     }
                 }
-                UCheckTheme();
-                AcApp.Core.Application.SystemVariableChanged += Application_SystemVariableChanged;
+                BcCommands.Rf_TypeArray = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +
@@ -104,18 +110,9 @@ namespace BcToolsC.BCad
             }
         }
 
-        static bool _darkTheme = false;
-        public static bool IsDarkTheme() => _darkTheme;
-        public static bool UCheckTheme() => _darkTheme = (short)AcApp.Core.Application.GetSystemVariable("COLORTHEME") == 0;
-        private void Application_SystemVariableChanged(object sender, AcApp.SystemVariableChangedEventArgs e)
-        {
-            if (e.Name == "COLORTHEME" && e.Changed)
-                UCheckTheme();
-        }
-
         public void Terminate() 
         {
-            AcApp.Core.Application.SystemVariableChanged -= Application_SystemVariableChanged;
+
         }
 
         // syscall pro otevøeni konzole

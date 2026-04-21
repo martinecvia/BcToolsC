@@ -11,16 +11,19 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Assert.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\COLOR.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\CommonOpenFileDialog.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PathHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)helpers\KrovakHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\FilePeekHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\ANGLE.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\LAYER.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)models\ReliefRepository.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\SCALE.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)models\TimeoutedWebClient.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Models\" />
     <Folder Include="$(MSBuildThisFileDirectory)Properties\" />
   </ItemGroup>
 </Project>

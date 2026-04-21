@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197 d17.13
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11612.150 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BcToolsC", "Src\Common\BcToolsC.shproj", "{722A50B8-8225-45F0-B14C-493935397047}"
 EndProject
@@ -15,22 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "BuildsTargets\U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetTopologySuite", "submodules\NetTopologySuite\src\NetTopologySuite\NetTopologySuite.csproj", "{B2929BD2-5409-0222-BA54-E6120CE64F1D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OldCode", "OldCode", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4A2B95E3-2BA6-4060-83FA-AE5DED7FF566}"
 	ProjectSection(SolutionItems) = preProject
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_KN_PARCEL_EXPORT.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_KN_PARCEL_EXPORT.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_KN_PARCEL_INFO.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_KN_PARCEL_INFO.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_KN_SJTSK.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_KN_SJTSK.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_TIF_SJTSK.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CUZK_TIF_SJTSK.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CZ_RELIEF.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_CZ_RELIEF.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_TIF_SJTSK.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_TIF_SJTSK.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_UCS_SJTSK.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\BAK_UCS_SJTSK.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\CadastralArea.cs = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\CadastralArea.cs
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\CommandInfo.cs = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\CommandInfo.cs
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\Forms\DownloadProgressForm.cs = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\Forms\DownloadProgressForm.cs
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Example\Example.cs = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Example\Example.cs
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\ExtensionApplication.cs = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\ExtensionApplication.cs
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\NOT_FOUND.png = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Resources\NOT_FOUND.png
-		..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\RelayCommand.cs = ..\..\..\OneDrive - VUT\VUT\public\_school\Závěřečné práce\Martin Coplák\src\CzechoprojectHelper\Common\RelayCommand.cs
+		odkazy.txt = odkazy.txt
+		WGS_JTSK.pdf = WGS_JTSK.pdf
 	EndProjectSection
 EndProject
 Global
