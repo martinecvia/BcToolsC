@@ -140,7 +140,7 @@ namespace BcToolsC.BCad.Transactions
             }
         }
 
-        protected void EraseEntity(ObjectId objectId)
+        public void EraseEntity(ObjectId objectId)
         {
             if (!TryGet<Entity>(objectId, out var entity, OpenMode.ForWrite)) return;
             entity.Erase();

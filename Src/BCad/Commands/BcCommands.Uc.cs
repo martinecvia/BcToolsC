@@ -14,7 +14,7 @@ namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands
     {
-        [AcRun.CommandMethod("BCTOOLSC_CH_UCS")]
+        [AcRun.CommandMethod("BCTOOLSC_UC_UCS")]
         public void _ChangeUcs()
         {
             AcApp.Document document = BcApp.Document;

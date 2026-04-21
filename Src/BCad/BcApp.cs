@@ -91,7 +91,7 @@ namespace BcToolsC.BCad
                         editor.Error($"Získání informace o platformì selhalo; Výjimka: {exception}\n");
                     }
                 }
-                BcCommands.Rf_TypeArray = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY);
+                BcCommands.Rf_TypeArray_Cz = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +

@@ -30,6 +30,9 @@ namespace BcToolsC.BCad
         public static void Ok(this Editor editor, object message)
             => editor.Format(message, "OK: ");
 
+        public static void Log(this Editor editor, object message)
+            => editor.Format(message, string.Empty);
+
         #region PRIVATE
         private static void Format(this Editor editor, object message, string prefix)
         {
@@ -57,6 +60,9 @@ namespace BcToolsC.BCad
 
         public static void Ok(this AcApp.Document document, object message)
             => document?.Editor.Ok(message);
+
+        public static void Log(this AcApp.Document document, object message)
+            => document?.Editor.Log(message);
     }
 
     public static class BlockTableExtensions

@@ -31,7 +31,7 @@ namespace BcToolsC.BCad.Commands
             { "250000", "ZTM250-SJTSK-TIFF" },
         };
 
-        [AcRun.CommandMethod("BCTOOLSC_DW_TIFF")]
+        [AcRun.CommandMethod("BCTOOLSC_TF_TIFF")]
         public void _DownloadTiff()
         {
             AcApp.Document document = BcApp.Document;

@@ -24,7 +24,8 @@ namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands
     {
-        internal static double[,] Rf_TypeArray = null;
+        internal static double[,] Rf_TypeArray_Cz = null;
+        internal static double[,] Rf_TypeArray_Sk = null;
         internal static double[,] DeserializeFromBase64(string base64)
         {
             byte[] data = Convert.FromBase64String(base64);
@@ -50,21 +51,21 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        [AcRun.CommandMethod("BCTOOLSC_RELIEF")]
-        public void Rf_PrintRelief()
+        [AcRun.CommandMethod("BCTOOLSC_RF_CZ")]
+        public void Rf_PrintRelief_Cz()
         {
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Editor editor = document.Editor;
             // Chyba kompilace
-            int n = Rf_TypeArray?.GetLength(0) ?? 0;
-            if (Rf_TypeArray == null || n == 0) return;
+            int n = Rf_TypeArray_Cz?.GetLength(0) ?? 0;
+            if (Rf_TypeArray_Cz == null || n == 0) return;
             Call(t =>
             {
                 // Vytvoření bodů z paměťové mapy
                 Point2d[] pts = new Point2d[n];
                 for (int i = 0; i < n; i++)
-                    pts[i] = new Point2d(Rf_TypeArray[i, 0], Rf_TypeArray[i, 1]);
+                    pts[i] = new Point2d(Rf_TypeArray_Cz[i, 0], Rf_TypeArray_Cz[i, 1]);
                 Polyline polyline = t.AddLWPolyline(pts, color: 3, layer: "BcToolsC_Relief_CZ", shouldBeClosed: true);
                 // Zoom do výkresu, zobrazující reliéf
                 // Extents polyline

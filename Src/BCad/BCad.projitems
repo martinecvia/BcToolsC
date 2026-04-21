@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Kn.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Mc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Rf.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Tf.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Uc.cs" />

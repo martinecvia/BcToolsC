@@ -33,7 +33,7 @@ namespace BcToolsC.BCad.Commands
             { "VKM", "KM-KU-VKM" }
         };
 
-        [AcRun.CommandMethod("BCTOOLSC_DW_KN")]
+        [AcRun.CommandMethod("BCTOOLSC_KN_DW")]
         public void Ku_DownloadKn()
         {
             AcApp.Document document = BcApp.Document;
