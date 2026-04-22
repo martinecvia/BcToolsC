@@ -10,10 +10,12 @@ using System.Runtime.Serialization;
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
 using AcRun = ZwSoft.ZwCAD.Runtime;
+using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Geometry;
 #else
 using AcRun = Autodesk.AutoCAD.Runtime;
+using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 #endif
@@ -110,26 +112,6 @@ namespace BcToolsC.BCad.Commands
             return false;
         }
 
-        bool CanRead(string lsPath, string lsFile)
-        {
-            lsFile = Path.Combine(lsPath, lsFile);
-            if (File.Exists(lsFile))
-            {
-                try
-                {
-                    using (FileStream stream = new FileStream(lsFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        return true;
-                }
-                catch (PathTooLongException) { }
-                catch (DirectoryNotFoundException) { }
-                catch (UnauthorizedAccessException) { }
-                catch (IOException) { }
-                catch (System.Security.SecurityException) { }
-                catch (Exception) { }
-            }
-            return false;
-        }
-
         string GetKeywordFromPrompt(Editor editor, string prompt,
             params string[] argv)
         {
@@ -154,13 +136,18 @@ namespace BcToolsC.BCad.Commands
             return evResult.Value;
         }
 
-        Point3d GetPointFromWGS84(__4326 wgs84)
+        ObjectId GetEntityFromPrompt(
+            Editor editor,
+            string prompt,
+            params Type[] allowedTypes)
         {
-            __5514 epsg = WGS84_SJTSK(wgs84, wgs84.H);
-            double x = epsg.Y;
-            double y = epsg.X;
-            double z = epsg.H;
-            return new Point3d(x, y, z);
+            PromptEntityOptions options = new PromptEntityOptions($"\n{prompt}:") { AllowNone = false };
+            options.SetRejectMessage("Not a valid entity!");
+            foreach (Type type in allowedTypes)
+                options.AddAllowedClass(type, true);
+            PromptEntityResult evResult = editor.GetEntity(options);
+            if (evResult.Status != PromptStatus.OK) return ObjectId.Null;
+            return evResult.ObjectId;
         }
 
         __4326 GetWGS84FromPoint(Point3d point)

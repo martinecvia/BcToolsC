@@ -61,6 +61,10 @@
       <HintPath>..\..\CadReferences\ZCAD2564\ZwDatabaseMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="ZwDatabaseMgdBrep">
+      <HintPath>..\..\CadReferences\ZCAD2564\ZwDatabaseMgdBrep.dll</HintPath>
+	  <Private>False</Private>		
+    </Reference>
     <Reference Include="ZwManaged">
       <HintPath>..\..\CadReferences\ZCAD2564\ZwManaged.dll</HintPath>
       <Private>False</Private>
@@ -69,6 +73,11 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="start.scr">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
   <Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />

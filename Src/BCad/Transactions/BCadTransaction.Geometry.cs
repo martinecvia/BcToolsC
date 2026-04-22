@@ -1,5 +1,7 @@
 using System; // Keep for .NET 4.6
-using System.Collections.Generic;
+using System.Collections.Generic; // Keep for .NET 4.6
+using System.Linq;
+
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM 
 #if ZWCAD
@@ -20,7 +22,7 @@ namespace BcToolsC.BCad.Transactions
     public partial class BCadTransaction
     {
         // Polyline
-        public struct BulgeVertex2d : IFormattable
+        public readonly struct BulgeVertex2d : IFormattable
         {
             public readonly Point2d point;
             public readonly double bulge;
@@ -49,8 +51,23 @@ namespace BcToolsC.BCad.Transactions
             }
         }
 
+        public Polyline AddLWPolyline(Point2d start, Point2d end,
+            string linetype = "Continuous", double linetypeWidth = 0.0, double linetypeScale = 1.0, bool linetypeGeneration = false,
+            LAYER? layer = null,
+            COLOR? color = null,
+            ANGLE? angle = null,
+            bool shouldBeClosed = false)
+            => AddLWPolyline(
+#if NET8_0_OR_GREATER
+                [start, end],
+#else
+                new[] { start, end },
+#endif
+                linetype, linetypeWidth, linetypeScale, linetypeGeneration,
+                layer, color, angle, false);
+
         public Polyline AddLWPolyline<T>(IEnumerable<T> vertexes,
-            string linetype = "Continuous", double linetypeWidth = 0, double linetypeScale = 1.0, bool linetypeGeneration = false,
+            string linetype = "Continuous", double linetypeWidth = 0.0, double linetypeScale = 1.0, bool linetypeGeneration = false,
             LAYER? layer = null,
             COLOR? color = null,
             ANGLE? angle = null,
@@ -90,6 +107,20 @@ namespace BcToolsC.BCad.Transactions
             result.LinetypeId = EnsureLinetype(linetype);
             result.LinetypeScale = linetypeScale;
             result.Plinegen = linetypeGeneration;
+            result.Color = EnsureColor(color);
+            return result;
+        }
+
+        public Circle AddCircle(Point3d center, double radius,
+            string linetype = "Continuous", double linetypeScale = 1.0,
+            LAYER? layer = null,
+            COLOR? color = null)
+        {
+            Circle entity = new Circle(center, Vector3d.ZAxis, radius);
+            Circle result = AddToModelSpace(entity);
+            result.LayerId = EnsureLayer(layer);
+            result.LinetypeId = EnsureLinetype(linetype);
+            result.LinetypeScale = linetypeScale;
             result.Color = EnsureColor(color);
             return result;
         }

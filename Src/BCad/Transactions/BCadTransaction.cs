@@ -208,7 +208,7 @@ namespace BcToolsC.BCad.Transactions
                 dBObject.DowngradeOpen();
         }
 
-        private bool Exists(ObjectId objectId) =>
+        public bool Exists(ObjectId objectId) =>
             objectId != ObjectId.Null && objectId.IsValid && !objectId.IsErased;
 
         void BeginInit(AcApp.Document d)

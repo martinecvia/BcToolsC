@@ -32,6 +32,10 @@
       <HintPath>..\..\CadReferences\2025\acdbmgd.dll</HintPath>
 	  <Private>False</Private>
 	</Reference>
+    <Reference Include="acdbmgdbrep">
+      <HintPath>..\..\CadReferences\2025\acdbmgdbrep.dll</HintPath>
+	  <Private>False</Private>
+    </Reference>
     <Reference Include="Acmgd">
       <HintPath>..\..\CadReferences\2025\acmgd.dll</HintPath>
 	  <Private>False</Private>

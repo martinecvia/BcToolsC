@@ -4,10 +4,12 @@ using System; // Keep for .NET 4.6
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM 
 #if ZWCAD
 using ZwSoft.ZwCAD.EditorInput;
+using ZwSoft.ZwCAD.Geometry;
 using AcApp = ZwSoft.ZwCAD.ApplicationServices;
 using AcDb = ZwSoft.ZwCAD.DatabaseServices;
 #else
 using Autodesk.AutoCAD.EditorInput;
+using Autodesk.AutoCAD.Geometry;
 using AcApp = Autodesk.AutoCAD.ApplicationServices;
 using AcDb = Autodesk.AutoCAD.DatabaseServices;
 #endif
@@ -63,6 +65,26 @@ namespace BcToolsC.BCad
 
         public static void Log(this AcApp.Document document, object message)
             => document?.Editor.Log(message);
+    }
+
+    public static class Point2dCollectionExtension
+    {
+        static Point2d[] ToArray(this Point2dCollection pts)
+        {
+            var result = new Point2d[pts.Count];
+            pts.CopyTo(result, 0);
+            return result;
+        }
+    }
+
+    public static class Point3dCollectionExtension
+    {
+        static Point3d[] ToArray(this Point3dCollection pts)
+        {
+            var result = new Point3d[pts.Count];
+            pts.CopyTo(result, 0);
+            return result;
+        }
     }
 
     public static class BlockTableExtensions
