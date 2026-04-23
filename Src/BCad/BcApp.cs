@@ -92,6 +92,7 @@ namespace BcToolsC.BCad
                     }
                 }
                 BcCommands.Rf_TypeArray_Cz = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
+                NetTopologySuite.NtsGeometryServices.Instance = new NetTopologySuite.NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +

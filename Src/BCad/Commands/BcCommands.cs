@@ -23,6 +23,8 @@ using Autodesk.AutoCAD.Geometry;
 
 using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
+using NetTopologySuite.Geometries;
+using BcToolsC.BCad.Transactions;
 
 [assembly: AcRun.CommandClass(typeof(BcToolsC.BCad.Commands.BcCommands))]
 namespace BcToolsC.BCad.Commands
@@ -116,6 +118,60 @@ namespace BcToolsC.BCad.Commands
                     return null;
                 }
             }
+        }
+
+        Point3dCollection GetPolylineVertices(BCadTransaction t, Curve curve)
+        {
+            Point3dCollection result = new Point3dCollection();
+            if (curve is Polyline3d poly3d)
+            {
+                var type = poly3d.PolyType;
+                foreach (ObjectId v3dId in poly3d) if (t.Exists(v3dId)
+                    && t.TryGet(v3dId, out PolylineVertex3d vertex) && vertex != null)
+                {
+                    if (type == Poly3dType.SimplePoly && vertex.VertexType == Vertex3dType.SimpleVertex)
+                        result.Add(vertex.Position);
+                    else if ((type == Poly3dType.CubicSplinePoly || type == Poly3dType.QuadSplinePoly)
+                    && vertex.VertexType != Vertex3dType.ControlVertex)
+                        result.Add(vertex.Position);
+                }
+            }
+            else if (curve is Polyline polyLw)
+            {
+                for (int i = 0; i < polyLw.NumberOfVertices; i++)
+                    result.Add(polyLw.GetPoint3dAt(i));
+            }
+            else if (curve is Polyline2d poly2d)
+            {
+                var type = poly2d.PolyType;
+                foreach (ObjectId v2dId in poly2d) if (t.Exists(v2dId)
+                    && t.TryGet(v2dId, out Vertex2d vertex) && vertex != null)
+                {
+                    if (type == Poly2dType.SimplePoly && vertex.VertexType == Vertex2dType.SimpleVertex)
+                        result.Add(vertex.Position);
+                    // Další druhy 2d polyline neřešíme
+                }
+            }
+            else if (curve is Line line)
+            {
+                result.Add(line.StartPoint);
+                result.Add(line.EndPoint);
+            }
+            return result;
+        }
+
+        double InterpolateZ(Coordinate[] arr, double px, double py)
+        {
+            Coordinate A = arr[0];
+            Coordinate B = arr[1];
+            Coordinate C = arr[2];
+            double dq = (B.Y - C.Y) * (A.X - C.X) + (C.X - B.X) * (A.Y - C.Y);
+            if (Math.Abs(dq) < 1E-5)
+                return (A.Z + B.Z + C.Z) / 3.0;
+            double wA = ((B.Y - C.Y) * (px - C.X) + (C.X - B.X) * (py - C.Y)) / dq;
+            double wB = ((C.Y - A.Y) * (px - C.X) + (A.X - C.X) * (py - C.Y)) / dq;
+            double wC = 1.0 - wA - wB;
+            return wA * A.Z + wB * B.Z + wC * C.Z;
         }
 
         string DownloadString(string url, double timeout = 5.0)

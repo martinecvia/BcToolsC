@@ -43,6 +43,7 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
@@ -63,7 +64,7 @@
     </Reference>
     <Reference Include="ZwDatabaseMgdBrep">
       <HintPath>..\..\CadReferences\ZCAD2564\ZwDatabaseMgdBrep.dll</HintPath>
-	  <Private>False</Private>		
+      <Private>False</Private>
     </Reference>
     <Reference Include="ZwManaged">
       <HintPath>..\..\CadReferences\ZCAD2564\ZwManaged.dll</HintPath>
@@ -78,6 +79,12 @@
     <None Include="start.scr">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\submodules\NetTopologySuite\src\NetTopologySuite\NetTopologySuite.csproj">
+      <Project>{b2929bd2-5409-0222-ba54-e6120ce64f1d}</Project>
+      <Name>NetTopologySuite</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
   <Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />
