@@ -23,6 +23,7 @@ using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+using NetTopologySuite.Geometries;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -387,7 +388,7 @@ namespace BcToolsC.BCad.Commands
                     progress.SetLimit(100);
                     progress.Start("Počítám profil ...");
                     int l = 0;
-                    for (int i = 1; i < deduped.Count; i++)
+                    for (int i = 0; i < deduped.Count; i++)
                     {
                         var p1 = deduped[i];
                         if (i % n == 0 && l < 100)
