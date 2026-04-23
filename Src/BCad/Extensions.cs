@@ -43,7 +43,7 @@ namespace BcToolsC.BCad
                 tMsg = "Prázdny objekt zásobníku.";
             string formatted = string.Format("{0}{1}", prefix, tMsg.Trim());
             Console.WriteLine(formatted); // Pokud Editor nám neexistuje nebo, chceme vidìt kontinuitu programu
-            editor?.WriteMessage($"\n{formatted}");
+            editor?.WriteMessage($"\n" + tMsg.Trim());
         }
         #endregion
     }

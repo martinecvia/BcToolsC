@@ -60,8 +60,61 @@ namespace BcToolsC.BCad.Commands
             using (TimeoutedWebClient wc = new TimeoutedWebClient { Timeout = (int)timeout * 1000 })
             {
                 wc.Headers[HttpRequestHeader.UserAgent] =
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
                 return wc.DownloadData(url);
+            }
+        }
+
+        byte[] DownloadDataWithProgress(string url, double timeout = 30.0)
+        {
+            using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
+            {
+                try
+                {
+#pragma warning disable SYSLIB0014 // Type or member is obsolete
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+#pragma warning restore SYSLIB0014 // Type or member is obsolete
+                    request.Timeout = (int)(timeout * 1_000);
+                    request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    {
+                        long size = response.ContentLength;
+                        bool hasSize = size > 0;
+                        progress.Start("Stahuji data ...");
+                        if (hasSize) progress.SetLimit(100);
+                        using (Stream remoteStream = response.GetResponseStream())
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            byte[] buffer = new byte[8192];
+                            var totalRead = 0;
+                            var bytesRead = 0;
+                            var last = 0;
+                            while ((bytesRead = remoteStream.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                ms.Write(buffer, 0, bytesRead);
+                                totalRead += bytesRead;
+                                if (hasSize)
+                                {
+                                    int curr = (int)((double)totalRead / size * 100);
+                                    if (curr > last)
+                                    {
+                                        for (int i = 0; i < curr - last; i++)
+                                            progress.MeterProgress();
+                                        last = curr;
+                                    }
+                                }
+                                System.Windows.Forms.Application.DoEvents();
+                            }
+                            progress.Stop();
+                            return ms.ToArray();
+                        }
+                    }
+                }
+                catch (Exception exception)
+                {
+                    progress.Stop();
+                    return null;
+                }
             }
         }
 
@@ -70,7 +123,7 @@ namespace BcToolsC.BCad.Commands
             using (TimeoutedWebClient wc = new TimeoutedWebClient { Timeout = (int)timeout * 1000 })
             {
                 wc.Headers[HttpRequestHeader.UserAgent] =
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
                 return wc.DownloadString(url);
             }
         }
@@ -78,6 +131,8 @@ namespace BcToolsC.BCad.Commands
         bool TryUnzipData(byte[] data, string lsPath, out string __saved)
         {
             __saved = default;
+            if (data == null || data.Length == 0)
+                return false;
             using (var ms = new MemoryStream(data))
             using (var archive = new ZipArchive(ms, ZipArchiveMode.Read))
             {
@@ -136,13 +191,29 @@ namespace BcToolsC.BCad.Commands
             return evResult.Value;
         }
 
+        SCALE? GetScaleFromPrompt(Editor editor, string prompt, int @default = 1_000)
+        {
+            PromptIntegerOptions options = new PromptIntegerOptions($"\n{prompt}: ")
+            {
+                DefaultValue = @default,
+                LowerLimit = 1,
+                UpperLimit = 1_000,
+                AllowNegative = false,
+                AllowNone = true
+            };
+            PromptIntegerResult evResult = editor.GetInteger(options);
+            if (evResult.Status != PromptStatus.OK) return null;
+            return new SCALE(1_000, evResult.Value);
+        }
+
         ObjectId GetEntityFromPrompt(
             Editor editor,
             string prompt,
             params Type[] allowedTypes)
         {
             PromptEntityOptions options = new PromptEntityOptions($"\n{prompt}:") { AllowNone = false };
-            options.SetRejectMessage("Not a valid entity!");
+            // SetRejectMessage musí být před definicí entit
+            options.SetRejectMessage("Výběr není platný.");
             foreach (Type type in allowedTypes)
                 options.AddAllowedClass(type, true);
             PromptEntityResult evResult = editor.GetEntity(options);
@@ -156,6 +227,7 @@ namespace BcToolsC.BCad.Commands
             double x = point.Y;
             double y = point.X;
             double z = point.Z;
+            Console.WriteLine($"JTSK_X: {x}, JTSK_Y: {y}");
             __4326 epsg;
             if (z > 0)
                 epsg = SJTSK_WGS84(x, y, z);

@@ -9,10 +9,12 @@ using System.Windows;
 #if ZWCAD
 using AcApp = ZwSoft.ZwCAD.ApplicationServices;
 using AcRun = ZwSoft.ZwCAD.Runtime;
+using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.EditorInput;
 #else
 using AcApp = Autodesk.AutoCAD.ApplicationServices;
 using AcRun = Autodesk.AutoCAD.Runtime;
+using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 #endif
 #endregion
@@ -37,8 +39,13 @@ namespace BcToolsC.BCad.Commands
         public void Ku_DownloadKn()
         {
             AcApp.Document document = BcApp.Document;
-            if (document == null) return;
+            Database db = document.Database;
             Editor editor = document.Editor;
+            if (!db.TileMode)
+            {
+                editor.Warn("Povoleno pouze v modelovém prostoru.");
+                return;
+            }
             var __point = GetPointFromPrompt  (editor, "Vyberte bod v modelovém prostoru");
             if (__point == null) goto user_closed_dialog;
             var __theme = GetKeywordFromPrompt(editor, "Vyberte formát", Kn_TypeThemeMap.Keys.ToArray());
@@ -109,15 +116,20 @@ namespace BcToolsC.BCad.Commands
                     if (result != MessageBoxResult.Yes)
                         goto user_closed_dialog;
                 }
-                var data = DownloadData(entry.Link);
+                var data = DownloadDataWithProgress(entry.Link);
+                if (data == null || data.Length == 0)
+                {
+                    editor.Ok("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                    return;
+                }
                 if (TryUnzipData(data, lsPath, out string __saved))
-                    editor.Ok("Uloženo; Cesta k souboru: " + __saved);
+                    editor.Ok("Ok; Cesta k souboru: " + __saved);
                 else
                     editor.Ok("Chyba; Nepovedlo se uložit soubor.");
             }
             return;
         no_data:
-            editor.Warn("Nebyli nalazeny žádné data.");
+            editor.Warn("Nebyla nalazena žádná data.");
             return;
         user_closed_dialog:
             editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");

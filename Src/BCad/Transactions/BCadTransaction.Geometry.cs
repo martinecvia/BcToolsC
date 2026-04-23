@@ -1,7 +1,4 @@
-using System; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
-using System.Linq;
-
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM 
 #if ZWCAD
@@ -21,36 +18,6 @@ namespace BcToolsC.BCad.Transactions
     // https://help.autodesk.com/view/OARX/2026/CSY/?guid=OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_Curve
     public partial class BCadTransaction
     {
-        // Polyline
-        public readonly struct BulgeVertex2d : IFormattable
-        {
-            public readonly Point2d point;
-            public readonly double bulge;
-            public BulgeVertex2d(Point2d point, double bulge)
-            {
-                this.point = point;
-                this.bulge = bulge;
-            }
-
-            public string ToString(string format, IFormatProvider formatProvider)
-            {
-                object[] array = null;
-                try
-                {
-                    array = new object[2];
-                    double num2 = point.X;
-                    array[0] = num2.ToString(format, formatProvider);
-                    double num3 = point.Y;
-                    array[1] = num3.ToString(format, formatProvider);
-                    return string.Format("({0},{1})", array);
-                }
-                catch
-                {
-                    return $"({point.X},{point.Y})";
-                }
-            }
-        }
-
         public Polyline AddLWPolyline(Point2d start, Point2d end,
             string linetype = "Continuous", double linetypeWidth = 0.0, double linetypeScale = 1.0, bool linetypeGeneration = false,
             LAYER? layer = null,
@@ -81,10 +48,6 @@ namespace BcToolsC.BCad.Transactions
                 {
                     switch (j)
                     {
-                        case BulgeVertex2d k:
-                            entity.AddVertexAt(i, k.point, k.bulge, linetypeWidth, linetypeWidth);
-                            i++;
-                            break;
                         case Point2d k:
                             entity.AddVertexAt(i, k, 0.0, linetypeWidth, linetypeWidth);
                             i++;
@@ -107,20 +70,6 @@ namespace BcToolsC.BCad.Transactions
             result.LinetypeId = EnsureLinetype(linetype);
             result.LinetypeScale = linetypeScale;
             result.Plinegen = linetypeGeneration;
-            result.Color = EnsureColor(color);
-            return result;
-        }
-
-        public Circle AddCircle(Point3d center, double radius,
-            string linetype = "Continuous", double linetypeScale = 1.0,
-            LAYER? layer = null,
-            COLOR? color = null)
-        {
-            Circle entity = new Circle(center, Vector3d.ZAxis, radius);
-            Circle result = AddToModelSpace(entity);
-            result.LayerId = EnsureLayer(layer);
-            result.LinetypeId = EnsureLinetype(linetype);
-            result.LinetypeScale = linetypeScale;
             result.Color = EnsureColor(color);
             return result;
         }

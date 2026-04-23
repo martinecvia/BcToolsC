@@ -25,7 +25,6 @@ namespace BcToolsC.BCad.Commands
     public partial class BcCommands
     {
         internal static double[,] Rf_TypeArray_Cz = null;
-        internal static double[,] Rf_TypeArray_Sk = null;
         internal static double[,] DeserializeFromBase64(string base64)
         {
             byte[] data = Convert.FromBase64String(base64);
@@ -56,37 +55,62 @@ namespace BcToolsC.BCad.Commands
         {
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
+            Database db = document.Database;
             Editor editor = document.Editor;
-            // Chyba kompilace
+            if (!db.TileMode)
+            {
+                editor.Warn("Povoleno pouze v modelovém prostoru.");
+                return;
+            }    
             int n = Rf_TypeArray_Cz?.GetLength(0) ?? 0;
             if (Rf_TypeArray_Cz == null || n == 0) return;
-            Call(t =>
+            Polyline polyline = Wrap(t =>
             {
                 // Vytvoření bodů z paměťové mapy
                 Point2d[] pts = new Point2d[n];
                 for (int i = 0; i < n; i++)
                     pts[i] = new Point2d(Rf_TypeArray_Cz[i, 0], Rf_TypeArray_Cz[i, 1]);
-                Polyline polyline = t.AddLWPolyline(pts, color: 3, layer: "BcToolsC_Relief_CZ", shouldBeClosed: true);
-                // Zoom do výkresu, zobrazující reliéf
-                // Extents polyline
-                Extents3d extents = polyline.GeometricExtents;
-                var min = extents.MinPoint;
-                var max = extents.MaxPoint;
-                double w = max.X - min.X;
-                double h = max.Y - min.Y;
-                // Ochrana proti nulovým rozměrům
-                if (w <= Tolerance.Global.EqualPoint ||
-                    h <= Tolerance.Global.EqualPoint)
-                    return;
-                // astavení pohledu
-                using (ViewTableRecord view = editor.GetCurrentView().Clone() as ViewTableRecord)
-                {
-                    view.CenterPoint = new Point2d((min.X + max.X) * .5, (min.Y + max.Y) * .5);
-                    view.Width  = w * 1.1;
-                    view.Height = h * 1.1;
-                    editor.SetCurrentView(view);
-                }
+                return t.AddLWPolyline(pts, color: 3, shouldBeClosed: true);
             });
+            // Zoom do výkresu, zobrazující reliéf
+            // Extents polyline
+            Extents3d extents = polyline.GeometricExtents;
+            // Nastavení pohledu
+            using (ViewTableRecord view = editor.GetCurrentView())
+            {
+                if (view == null) return;
+                // Transformace WCS -> DCS
+                Matrix3d wcsToDcs = 
+                    Matrix3d.WorldToPlane(view.ViewDirection) * 
+                    Matrix3d.Displacement(view.Target.GetAsVector().Negate()) * 
+                    Matrix3d.Rotation(-view.ViewTwist, view.ViewDirection, view.Target);
+
+                Point3d minDcs = extents.MinPoint.TransformBy(wcsToDcs);
+                Point3d maxDcs = extents.MaxPoint.TransformBy(wcsToDcs);
+                double w = maxDcs.X - minDcs.X;
+                double h = maxDcs.Y - minDcs.Y;
+                if (w <= Tolerance.Global.EqualPoint ||
+                h <= Tolerance.Global.EqualPoint)
+                    return;
+                Point2d center = new Point2d(
+                    (minDcs.X + maxDcs.X) * 0.5, 
+                    (minDcs.Y + maxDcs.Y) * 0.5);
+                // Korekce poměru stran okna
+                double viewAspect = view.Width / view.Height;
+                double entityAspect = w / h;
+                if (entityAspect > viewAspect)
+                    h = w / viewAspect;
+                else
+                    w = h * viewAspect;
+                // Nastavení pohledu (malá rezerva kolem entity)
+                const double margin = 1.005;
+                view.CenterPoint = center;
+                // Necháváme zhruba 5% rezervu
+                view.Width  = w * margin;
+                view.Height = h * margin;
+                editor.SetCurrentView(view);
+            }
+            editor.Ok("Ok; Vykreslen reliéf ČR");
         }
     }
 }

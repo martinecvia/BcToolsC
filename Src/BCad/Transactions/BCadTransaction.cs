@@ -100,10 +100,21 @@ namespace BcToolsC.BCad.Transactions
             if (Transaction != null && !Transaction.IsDisposed)
                 Transaction.Abort();
         }
+
+        public void MoveToTop<T>(T entity)
+            where T : Entity
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (!Exists(entity.ObjectId)) return;
+            BlockTableRecord record = GetRequired<BlockTableRecord>(entity.OwnerId, OpenMode.ForWrite);
+            DrawOrderTable drawTable = GetRequired<DrawOrderTable>(record.DrawOrderTableId, OpenMode.ForWrite);
+            drawTable.MoveToTop(new ObjectIdCollection { entity.ObjectId });
+        }
+
         // -------------------------------------------------------------------- 
         // Core 
         // --------------------------------------------------------------------
-        protected T Get<T>(ObjectId objectId,
+        public T Get<T>(ObjectId objectId,
             OpenMode mode = OpenMode.ForRead)
             where T : DBObject
         {
@@ -146,7 +157,7 @@ namespace BcToolsC.BCad.Transactions
             entity.Erase();
         }
 
-        protected T AddToModelSpace<T>(T entity)
+        public T AddToModelSpace<T>(T entity)
             where T : Entity
         {
             if (entity == null)
@@ -196,13 +207,13 @@ namespace BcToolsC.BCad.Transactions
             }
         }
 
-        private void EnsureCanWrite(DBObject dBObject)
+        public void EnsureCanWrite(DBObject dBObject)
         {
             if (dBObject != null && !dBObject.IsWriteEnabled)
                 dBObject.UpgradeOpen();
         }
 
-        private void EnsureReadOnly(DBObject dBObject)
+        public void EnsureReadOnly(DBObject dBObject)
         {
             if (dBObject != null && dBObject.IsWriteEnabled)
                 dBObject.DowngradeOpen();

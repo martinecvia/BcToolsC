@@ -10,14 +10,14 @@ namespace BcToolsC.Models
         [DataMember] public readonly double Y;
         public readonly double sY;
         public readonly double sA;
-        public SCALE(double _x = 1000.0, double _y = 1000.0)
+        public SCALE(double _x = 1_000.0, double _y = 1_000.0)
         {
             if (_x < 0.0)
-                throw new System.InvalidOperationException("Cannot set 'x' scale <= 0");
+                _x = 1_000.0;
             X = _x;
-            sX = 1_000_000 / _x;
+            sX = 1_000 / _x;
             if (_y < 0.0)
-                throw new System.InvalidOperationException("Cannot set 'y' scale <= 0");
+                _y = 1_000.0;
             Y = _y;
             sY = 1_000 / _y;
             sA = sY / sX;

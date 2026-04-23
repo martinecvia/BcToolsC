@@ -10,18 +10,19 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Kn.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Mc.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Rf.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Mc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Rf.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Tf.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Uc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Uc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Geometry.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Layer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Misc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.TableId.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Text.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="$(MSBuildThisFileDirectory)Transactions\" />
