@@ -23,7 +23,6 @@ using Autodesk.AutoCAD.Geometry;
 
 using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
-using NetTopologySuite.Geometries;
 using BcToolsC.BCad.Transactions;
 
 [assembly: AcRun.CommandClass(typeof(BcToolsC.BCad.Commands.BcCommands))]
@@ -158,20 +157,6 @@ namespace BcToolsC.BCad.Commands
                 result.Add(line.EndPoint);
             }
             return result;
-        }
-
-        double InterpolateZ(Coordinate[] arr, double px, double py)
-        {
-            Coordinate A = arr[0];
-            Coordinate B = arr[1];
-            Coordinate C = arr[2];
-            double dq = (B.Y - C.Y) * (A.X - C.X) + (C.X - B.X) * (A.Y - C.Y);
-            if (Math.Abs(dq) < 1E-5)
-                return (A.Z + B.Z + C.Z) / 3.0;
-            double wA = ((B.Y - C.Y) * (px - C.X) + (C.X - B.X) * (py - C.Y)) / dq;
-            double wB = ((C.Y - A.Y) * (px - C.X) + (A.X - C.X) * (py - C.Y)) / dq;
-            double wC = 1.0 - wA - wB;
-            return wA * A.Z + wB * B.Z + wC * C.Z;
         }
 
         string DownloadString(string url, double timeout = 5.0)

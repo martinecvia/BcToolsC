@@ -24,6 +24,13 @@
   <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
   <Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />
   <ItemGroup>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\submodules\NetTopologySuite\src\NetTopologySuite\NetTopologySuite.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -53,5 +60,14 @@
     <Reference Include="Autodesk.AutoCAD.Interop.Common">
       <HintPath>..\..\CadReferences\2025\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="start.scr">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

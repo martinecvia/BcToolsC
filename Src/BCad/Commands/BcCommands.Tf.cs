@@ -179,6 +179,7 @@ namespace BcToolsC.BCad.Commands
                                 RasterImage.EnableReactors(true);
                                 if (ucreated) raster.Dispose();
                             }
+                            editor.Ok("Ok; Vloženo");
                         });
                     }catch (Exception message) {
                         editor.Error("Chyba; " + message.Message);
@@ -186,6 +187,7 @@ namespace BcToolsC.BCad.Commands
                 }
                 else
                     editor.Ok("Chyba; Nepovedlo se uložit soubor.");
+                return;
             local_user_closed_dialog:
                 editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
                 return;
@@ -286,6 +288,7 @@ namespace BcToolsC.BCad.Commands
                         var xVect = new Vector3d(tfw[0], +tfw[2], 0);
                         var yVect = new Vector3d(tfw[1], -tfw[3], 0);
                         rasterImg.Orientation = new CoordinateSystem3d(origin, xVect, yVect);
+                        editor.Ok("Ok; Vloženo");
                     } catch (Exception exception) {
                         editor.Error("Chyba; " + exception.Message);
                     }

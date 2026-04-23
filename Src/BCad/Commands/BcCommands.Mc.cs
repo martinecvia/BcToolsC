@@ -22,13 +22,7 @@ using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 #endregion
 
 using BcToolsC.Models;
-using BcToolsC.BCad.Transactions;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
-using NetTopologySuite.Geometries;
-using System.Windows.Documents;
-using NetTopologySuite.GeometriesGraph;
-using NetTopologySuite.Triangulate.Tri;
-using NetTopologySuite.Index.Strtree;
 
 namespace BcToolsC.BCad.Commands
 {
