@@ -38,9 +38,9 @@ jobs:
       run: nuget restore BcToolsC.sln
 
     # Build .NET 4.7 project (ZWCAD)
-    - name: Build .NET 4.7 (ZCAD)
-      run: msbuild BuildTargets/BcToolsZC25/BcToolsZW25.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD
+    - name: Build .NET 4.7 (ZCAD.25)
+      run: msbuild BuildsTargets/BcToolsZC25/BcToolsZC25.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD
 
     # Build .NET 8.0 project
-    - name: Build .NET 8.0 (ACAD) (Test 80)
-      run: dotnet build BuildTargets/BcToolsAC25/BcToolsAC25.csproj -c Release
+    - name: Build .NET 8.0 (ACAD.25)
+      run: dotnet build BuildsTargets/BcToolsAC25/BcToolsAC25.csproj -c Release
