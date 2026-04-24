@@ -39,14 +39,8 @@ jobs:
 
     # Build .NET 4.7 project (ZWCAD)
     - name: Build .NET 4.7 (ZCAD.25)
-      run: msbuild BuildsTargets/BcToolsZC25/BcToolsZC25.csproj ^
-           /t:Restore,Build ^
-           /p:Configuration=Release ^
-           /p:DefineConstants=ZWCAD ^
-           /p:AllowUnsafeBlocks=true
+      run: msbuild BuildsTargets/BcToolsZC25/BcToolsZC25.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
 
     # Build .NET 8.0 project
     - name: Build .NET 8.0 (ACAD.25)
-      run: dotnet build BuildsTargets/BcToolsAC25/BcToolsAC25.csproj ^
-           -c Release ^
-           /p:AllowUnsafeBlocks=true
+      run: dotnet build BuildsTargets/BcToolsAC25/BcToolsAC25.csproj -c Release /p:AllowUnsafeBlocks=true
