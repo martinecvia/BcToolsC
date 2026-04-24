@@ -152,8 +152,8 @@ namespace BcToolsC.BCad.Commands
                 catch (Exception) { editor.Error("Chyba; Nepovedlo se získat délku objektu."); return; }
                 t.AddLWPolyline(new[] {
                     new Point2d(dx, dy),
-                    new Point2d(dx + 2.5, dy + 2.5),
-                    new Point2d(dx - 2.5, dy + 2.5)
+                    new Point2d(dx + (2.5 * scale.sY), dy + (2.5 * scale.sY)),
+                    new Point2d(dx - (2.5 * scale.sY), dy + (2.5 * scale.sY))
                 }, shouldBeClosed: true);
                 // Zde chceme získat výšku pro srovnávací rovinu,
                 // o kterou pak opravíme souřadnici Y
@@ -168,7 +168,8 @@ namespace BcToolsC.BCad.Commands
                 // Zaokrouhlení dolů na nejbližší desítku
                 double my = Math.Floor(minY / 10.0) * 10.0;
                 _mTextBringFront.Add(t.AddMText($"{my:N3}",
-                new Point2d(dx + 1.0, dy + 2.5 - .2),
+                new Point2d(dx + (1.0 * scale.sY), dy + (2.5 - .2) * scale.sY),
+                height: 2.5 * scale.sY,
                 vMode: AttachmentPoint.BottomLeft, additional: (m) => {
                     m.BackgroundFill = true;
                     m.BackgroundScaleFactor = 1.0;
@@ -420,8 +421,8 @@ namespace BcToolsC.BCad.Commands
                 catch (Exception) { editor.Error("Chyba; Nepovedlo se získat délku objektu."); return; }
                 t.AddLWPolyline(new[] {
                     new Point2d(dx, dy),
-                    new Point2d(dx + 2.5, dy + 2.5),
-                    new Point2d(dx - 2.5, dy + 2.5)
+                    new Point2d(dx + (2.5 * scale.sY), dy + (2.5 * scale.sY)),
+                    new Point2d(dx - (2.5 * scale.sY), dy + (2.5 * scale.sY))
                 }, shouldBeClosed: true);
                 // Výška
                 // Zde chceme získat výšku pro srovnávací rovinu,
@@ -432,7 +433,8 @@ namespace BcToolsC.BCad.Commands
                 // Zaokrouhlení dolů na nejbližší desítku
                 double my = Math.Floor(minY / 10.0) * 10.0;
                 _mTextBringFront.Add(t.AddMText($"{my:N3}",
-                new Point2d(dx + 1.0, dy + 2.5 - .2),
+                new Point2d(dx + (1.0 * scale.sY), dy + (2.5 - .2) * scale.sY),
+                height: 2.5 * scale.sY,
                 vMode: AttachmentPoint.BottomLeft, additional: (m) => {
                     m.BackgroundFill = true;
                     m.BackgroundScaleFactor = 1.0;
@@ -456,6 +458,12 @@ namespace BcToolsC.BCad.Commands
         user_closed_dialog:
             editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
             return;
+        }
+
+        [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE_DT4")]
+        public void Mc_ProfileDt4()
+        {
+
         }
 
         private List<Point3d> Profiler_CollectIntersectsWith(Geometry intersection,

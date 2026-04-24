@@ -1,3 +1,0 @@
-[submodule "submodules/NetTopologySuite"]
-	path = submodules/NetTopologySuite
-	url = https://github.com/NetTopologySuite/NetTopologySuite.git

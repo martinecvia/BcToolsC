@@ -20,18 +20,17 @@
 	<GenerateAssemblyCopyright>false</GenerateAssemblyCopyright>
 	<GenerateAssemblyTrademark>false</GenerateAssemblyTrademark>
 	<AssemblyName>BcToolsAC25.0</AssemblyName>
+	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
   <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
   <Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />
+  <Import Project="..\..\Src\Topology\Topology.projitems" Label="Shared" />
   <ItemGroup>
     <Compile Include="Properties\Settings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\submodules\NetTopologySuite\src\NetTopologySuite\NetTopologySuite.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="accoremgd">
@@ -56,9 +55,13 @@
 	</Reference>
     <Reference Include="Autodesk.AutoCAD.Interop">
       <HintPath>..\..\CadReferences\2025\Autodesk.AutoCAD.Interop.dll</HintPath>
+      <Private>False</Private>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Autodesk.AutoCAD.Interop.Common">
       <HintPath>..\..\CadReferences\2025\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>

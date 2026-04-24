@@ -38,7 +38,7 @@ namespace BcToolsC.BCad
     public class BcApp : IExtensionApplication
     {
         public static string Name => "";
-        public static string Version => $"BcToolsC.NET / 1.0.2604.19-test";
+        public static string Version => $"BcToolsC.NET / 1.0.2604.24-test";
         public static AcadApplication ThisApplication => (AcadApplication)Application.AcadApplication;
         public static AcadDocument ThisDrawing => (AcadDocument)DocumentExtension.GetAcadDocument(Document);
         // Platforma, pro kterou máme spuštìnou instanci
@@ -92,7 +92,9 @@ namespace BcToolsC.BCad
                     }
                 }
                 BcCommands.Rf_TypeArray_Cz = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
+                /*
                 NetTopologySuite.NtsGeometryServices.Instance = new NetTopologySuite.NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
+                */
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +
