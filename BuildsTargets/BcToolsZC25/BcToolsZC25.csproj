@@ -112,6 +112,7 @@
   <PropertyGroup>
     <IlRepackOutput>$(OutputPath)$(AssemblyName).dll</IlRepackOutput>
     <IlRepackTemp>$(OutputPath)$(AssemblyName).ilrepack.dll</IlRepackTemp>
+	<RunILRepack Condition="'$(CI)' == 'true'">false</RunILRepack>
   </PropertyGroup>
   <ItemGroup>
     <IlRepackInputAssemblies Include="
