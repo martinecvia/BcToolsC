@@ -108,11 +108,10 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\..\packages\ILRepack.Lib.MSBuild.Task.2.0.44.2\build\ILRepack.Lib.MSBuild.Task.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\ILRepack.Lib.MSBuild.Task.2.0.44.2\build\ILRepack.Lib.MSBuild.Task.targets'))" />
   </Target>
-  <Target Name="ILRepackMerge" AfterTargets="Build" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+  <Target Name="ILRepackMerge" AfterTargets="Build" Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' AND '$(CI)' != 'true' ">
   <PropertyGroup>
     <IlRepackOutput>$(OutputPath)$(AssemblyName).dll</IlRepackOutput>
     <IlRepackTemp>$(OutputPath)$(AssemblyName).ilrepack.dll</IlRepackTemp>
-	<RunILRepack Condition="'$(CI)' == 'true'">false</RunILRepack>
   </PropertyGroup>
   <ItemGroup>
     <IlRepackInputAssemblies Include="
@@ -126,7 +125,6 @@
 		Parallel="true"
 		Internalize="true"
 		Union="true"
-		DebugInfo="true"
 		InputAssemblies="@(IlRepackInputAssemblies)"
 		OutputFile="$(IlRepackTemp)"
 		LibraryPath="
