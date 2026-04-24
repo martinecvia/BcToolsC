@@ -1,0 +1,46 @@
+name: MSBuild
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-cad-4:
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install .NET Framework 4.7 Developer Pack
+      run: |
+        choco install netfx-4.7-devpack -y --no-progress
+        
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+      
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+
+    - name: Setup .NET 8 SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+      
+    - name: Restore Packages
+      run: nuget restore BcToolsC.sln
+
+    # Build .NET 4.7 project (ZWCAD)
+    - name: Build .NET 4.7 (ZCAD)
+      run: msbuild BuildTargets/BcToolsZC25/BcToolsZW25.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD
+
+    # Build .NET 8.0 project
+    - name: Build .NET 8.0 (ACAD) (Test 80)
+      run: dotnet build BuildTargets/BcToolsAC25/BcToolsAC25.csproj -c Release
