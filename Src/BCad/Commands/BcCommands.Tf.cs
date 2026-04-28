@@ -161,7 +161,6 @@ namespace BcToolsC.BCad.Commands
                         var key = Path.GetFileNameWithoutExtension(__saved);
                         Call(t =>
                         {
-                            bool ucreated = false;
                             ObjectId tiffId;
                             RasterImageDef raster;
                             ObjectId dictId = RasterImageDef.GetImageDictionary(t.Database);
@@ -169,20 +168,12 @@ namespace BcToolsC.BCad.Commands
                                 dictId = RasterImageDef.CreateImageDictionary(t.Database);
                             if (!t.TryGet(dictId, out DBDictionary dict))
                                 throw new InvalidOperationException("Databáze rastrových obrázků není dostupná");
-                            if (dict.Contains(key))
-                            {
-                                tiffId = dict.GetAt(key);
-                                raster = t.Get<RasterImageDef>(tiffId);
-                            }
-                            else
-                            {
-                                raster = new RasterImageDef { SourceFileName = tifPath };
-                                raster.Load();
-                                t.EnsureCanWrite(dict);
-                                tiffId = dict.SetAt(key, raster);
-                                t.Transaction.AddNewlyCreatedDBObject(raster, true);
-                                ucreated = true;
-                            }
+                            if (dict.Contains(key)) return;
+                            raster = new RasterImageDef { SourceFileName = tifPath };
+                            raster.Load();
+                            t.EnsureCanWrite(dict);
+                            tiffId = dict.SetAt(key, raster);
+                            t.Transaction.AddNewlyCreatedDBObject(raster, true);
                             using (var rasterImg = new RasterImage
                             {
                                 ImageDefId = tiffId,
@@ -191,12 +182,12 @@ namespace BcToolsC.BCad.Commands
                             {
                                 t.AddToModelSpace(rasterImg);
                                 RasterImage.EnableReactors(true);
-                                if (ucreated) raster.Dispose();
+                                raster.Dispose();
                                 t.MoveToBottom(rasterImg);
                             }
                             editor.Ok("Ok; Vloženo");
                         });
-                    }catch (Exception message) {
+                    } catch (Exception message) {
                         editor.Error("Chyba; " + message.Message);
                     }
                 }
@@ -256,7 +247,7 @@ namespace BcToolsC.BCad.Commands
                         ObjectId tiffId = rasterImg.ImageDefId;
                         if (!t.TryGet(tiffId, out RasterImageDef raster))
                             continue;
-                        if (raster.IsLoaded)
+                        if (!raster.IsLoaded)
                         {
                             t.EnsureCanWrite(raster);
                             raster.Load();
