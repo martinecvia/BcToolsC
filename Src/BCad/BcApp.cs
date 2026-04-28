@@ -1,3 +1,4 @@
+#pragma warning disable
 #define NON_VOLATILE_MEMORY
 using System; // Keep for .NET 4.6
 using System.Runtime.InteropServices;
@@ -30,6 +31,8 @@ using Autodesk.AutoCAD.EditorInput;
 using BcToolsC.BCad.Commands;
 using BcToolsC.Models;
 
+using NetTopologySuite;
+
 [assembly: CommandClass(typeof(BcToolsC.BCad.BcApp))]
 namespace BcToolsC.BCad
 {
@@ -37,17 +40,19 @@ namespace BcToolsC.BCad
     // https://keanw.com/2015/01/using-environment-variables-inside-autocad-file-path-options.html
     public class BcApp : IExtensionApplication
     {
-        public static string Name => "";
-        public static string Version => $"BcToolsC.NET / 1.0.2604.24-test";
+        public static string Version => "BcToolsC.NET / 1.0.2604.24-test";
         public static AcadApplication ThisApplication => (AcadApplication)Application.AcadApplication;
         public static AcadDocument ThisDrawing => (AcadDocument)DocumentExtension.GetAcadDocument(Document);
         // Platforma, pro kterou máme spuštìnou instanci
         public static bool IsAcad { get; private set; }
         public static Document Document => AcApp.Core.Application.DocumentManager.MdiActiveDocument;
         public static RXClass Entity = RXObject.GetClass(typeof(AcDb.Entity));
-        public static string CurrentDirectory => Document != null 
+#pragma warning disable CS8603 // Possible null reference return.
+        public static string CurrentDirectory => !string.IsNullOrEmpty(Document?.Database?.Filename)
             ? Path.GetDirectoryName(Document.Database.Filename)
             : Path.GetTempPath();
+#pragma warning restore CS8603 // Possible null reference return.
+        public static bool IsAppProperlyInitialized { get; private set; }
 
         public void Initialize()
         {
@@ -92,9 +97,7 @@ namespace BcToolsC.BCad
                     }
                 }
                 BcCommands.Rf_TypeArray_Cz = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
-                /*
-                NetTopologySuite.NtsGeometryServices.Instance = new NetTopologySuite.NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
-                */
+                NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +
@@ -106,10 +109,11 @@ namespace BcToolsC.BCad
                 "\n==========================================\n");
                 // Zde probíhá inicializace instance
                 editor.Ok($"Inicializace dokonèena.\n");
+                IsAppProperlyInitialized = true;
             }
             catch (System.Exception exception)
             {
-                editor.Error($"Inicializace selhala; Výjimka: {exception}\n");
+                editor.Error($"Inicializace selhala; Výjimka: {exception.Message}\n");
             }
         }
 

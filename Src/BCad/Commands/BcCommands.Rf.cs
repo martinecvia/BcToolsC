@@ -53,6 +53,7 @@ namespace BcToolsC.BCad.Commands
         [AcRun.CommandMethod("BCTOOLSC_RF_CZ")]
         public void Rf_PrintRelief_Cz()
         {
+            if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;

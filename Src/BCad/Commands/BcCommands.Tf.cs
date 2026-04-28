@@ -41,6 +41,7 @@ namespace BcToolsC.BCad.Commands
         [AcRun.CommandMethod("BCTOOLSC_TF_DOWN")]
         public void Tf_DownloadTiff()
         {
+            if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;
@@ -72,8 +73,10 @@ namespace BcToolsC.BCad.Commands
                 {
                     string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
                         theme, wgs84.L, wgs84.B);
-                    editor.Debug(url);
+                    editor.Info("Kontaktuji ... https://atom.cuzk.cz");
                     string json = DownloadString(url);
+                    if (string.IsNullOrWhiteSpace(json))
+                        throw new Exception("Prázdná odpověď serveru.");
                     response = Deserialize<AtomicEntries>(json);
                 }
                 catch (Exception exception)
@@ -113,6 +116,16 @@ namespace BcToolsC.BCad.Commands
                         MessageBoxResult.No);
                     if (result != MessageBoxResult.Yes)
                         goto user_closed_dialog;
+                    // Soubor může být ještě zamčený
+                    if (IsLocked(tfwPath))
+                    {
+                        MessageBox.Show(
+                            "Soubor je právě používán jiným procesem nebo je zamčený pro zápis.",
+                            "Soubor nelze přepsat",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return;
+                    }
                 }
                 var data = DownloadDataWithProgress(entry.Link);
                 if (data == null || data.Length == 0)
@@ -120,7 +133,8 @@ namespace BcToolsC.BCad.Commands
                     editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                     return;
                 }
-                if (TryUnzipData(data, lsPath, out string __saved))
+                if (TryUnzipData(data, lsPath, 
+                    out string __saved))
                 {
                     try
                     {
@@ -178,6 +192,7 @@ namespace BcToolsC.BCad.Commands
                                 t.AddToModelSpace(rasterImg);
                                 RasterImage.EnableReactors(true);
                                 if (ucreated) raster.Dispose();
+                                t.MoveToBottom(rasterImg);
                             }
                             editor.Ok("Ok; Vloženo");
                         });
@@ -189,7 +204,7 @@ namespace BcToolsC.BCad.Commands
                     editor.Ok("Chyba; Nepovedlo se uložit soubor.");
                 return;
             local_user_closed_dialog:
-                editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
+                editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
             return;
@@ -197,7 +212,7 @@ namespace BcToolsC.BCad.Commands
             editor.Warn("Nebyla nalazena žádná data.");
             return;
         user_closed_dialog:
-            editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
+            editor.Warn("Výběr byl zrušen uživatelem.");
             return;
         addr_isnt_writable:
             editor.Warn("Adresář není zapisovatelný!");
@@ -207,6 +222,7 @@ namespace BcToolsC.BCad.Commands
         [AcRun.CommandMethod("BCTOOLSC_TF_SEAT")]
         public void Tf_ApplyTiff()
         {
+            if (!BcApp.IsAppProperlyInitialized) return; 
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;
@@ -288,6 +304,7 @@ namespace BcToolsC.BCad.Commands
                         var xVect = new Vector3d(tfw[0], +tfw[2], 0);
                         var yVect = new Vector3d(tfw[1], -tfw[3], 0);
                         rasterImg.Orientation = new CoordinateSystem3d(origin, xVect, yVect);
+                        t.MoveToBottom(rasterImg);
                         editor.Ok("Ok; Vloženo");
                     } catch (Exception exception) {
                         editor.Error("Chyba; " + exception.Message);
@@ -302,8 +319,10 @@ namespace BcToolsC.BCad.Commands
             editor.Warn("Adresář není zapisovatelný!");
             return;
         user_closed_dialog:
-            editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
+            editor.Warn("Výběr byl zrušen uživatelem.");
             return;
         }
+
+        #region CALLING_O_TPL
+        #endregion
     }
-}

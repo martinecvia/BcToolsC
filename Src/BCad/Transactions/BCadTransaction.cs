@@ -111,6 +111,16 @@ namespace BcToolsC.BCad.Transactions
             drawTable.MoveToTop(new ObjectIdCollection { entity.ObjectId });
         }
 
+        public void MoveToBottom<T>(T entity)
+            where T : Entity
+        {
+            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (!Exists(entity.ObjectId)) return;
+            BlockTableRecord record = GetRequired<BlockTableRecord>(entity.OwnerId, OpenMode.ForWrite);
+            DrawOrderTable drawTable = GetRequired<DrawOrderTable>(record.DrawOrderTableId, OpenMode.ForWrite);
+            drawTable.MoveToBottom(new ObjectIdCollection { entity.ObjectId });
+        }
+
         // -------------------------------------------------------------------- 
         // Core 
         // --------------------------------------------------------------------

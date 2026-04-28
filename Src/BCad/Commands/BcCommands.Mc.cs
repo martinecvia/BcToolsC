@@ -35,6 +35,7 @@ namespace BcToolsC.BCad.Commands
         [AcRun.CommandMethod("BCTOOLSC_MC_RM_PROXY")]
         public void Mc_ClearProxy()
         {
+            if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;
@@ -105,6 +106,7 @@ namespace BcToolsC.BCad.Commands
         int previousScaleY = 1_000;
         void BuildProfiler(bool promptWithSolid = false)
         {
+            if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;
@@ -115,8 +117,8 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             Matrix3d ucs = editor.CurrentUserCoordinateSystem;
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku (Line, Polyline, Polyline3d)",
-            typeof(Line), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
+            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
             if (__curve == ObjectId.Null) goto no_data;
 
             var __point = GetPointFromPrompt(editor, "Vyberte vkládací bod");
@@ -134,6 +136,7 @@ namespace BcToolsC.BCad.Commands
             Call(t =>
             {
                 if (!t.TryGet(__curve, out Curve curve)) goto local_no_data;
+                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
                 Point3dCollection vertice = GetPolylineVertices(t, curve);
                 if (vertice.Count < 2) goto local_no_data;
                 if (curve.Closed) vertice.Add(vertice[0]);
@@ -143,6 +146,7 @@ namespace BcToolsC.BCad.Commands
                 var ter = new List<List<Point2d>>();
                 if (t.Exists(__solid) && t.TryGet(__solid, out Solid3d solid))
                     ter = Profiler_CollectIntersectsWith(vertice, curve, solid);
+
                 List<MText> _mTextBringFront = new List<MText>();
                 double dx = point.X;
                 double dy = point.Y;
@@ -175,6 +179,7 @@ namespace BcToolsC.BCad.Commands
                     m.BackgroundScaleFactor = 1.0;
                 }));
                 t.AddLWPolyline(new Point2d(dx, dy), new Point2d(dx + dl * scale.sX, dy), color: 0);
+
                 // Vykreslení křivky
                 t.AddLWPolyline(pts.Select(p => new Point2d(p.X * scale.sX + dx, (p.Y - my) * scale.sY + dy)), color: 3);
                 foreach (var jmp in ter) if (jmp.Count != 0)
@@ -194,7 +199,7 @@ namespace BcToolsC.BCad.Commands
             editor.Warn("Nebyla nalazena žádná data.");
             return;
         user_closed_dialog:
-            editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
+            editor.Warn("Výběr byl zrušen uživatelem.");
             return;
         }
 
@@ -287,14 +292,14 @@ namespace BcToolsC.BCad.Commands
             public bool Equals(Point3d a, Point3d b)
                 => Math.Abs(a.X - b.X) < _tolerance
                 && Math.Abs(a.Y - b.Y) < _tolerance;
-            public int GetHashCode(Point3d p)
-                => (Math.Round(p.X, 5).GetHashCode() * 397)
-                 ^ Math.Round(p.Y, 5).GetHashCode();
+            private long Q(double value) => (long)Math.Round(value / _tolerance);
+            public int GetHashCode(Point3d p) => (Q(p.X).GetHashCode() * 397) ^ Q(p.Y).GetHashCode();
         }
 
         [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE_3DFACE")]
         public void Mc_Profile3dFace()
         {
+            if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;
@@ -305,8 +310,8 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             Matrix3d ucs = editor.CurrentUserCoordinateSystem;
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku (Line, Polyline, Polyline3d)",
-            typeof(Line), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
+            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
             if (__curve == ObjectId.Null) goto no_data;
 
             var __point = GetPointFromPrompt(editor, "Vyberte vkládací bod");
@@ -314,14 +319,18 @@ namespace BcToolsC.BCad.Commands
             var point = __point.Value.TransformBy(ucs);
             var scale = GetScaleFromPrompt(editor, "Zadejte měřítko Y", previousScaleY)
                 ?? new SCALE(1_000, 1_000);
-            previousScaleY = (int)scale.Y;
-            PromptSelectionResult evResult = editor.GetSelection(new SelectionFilter(new[] { new TypedValue((int)DxfCode.Start, "3DFACE") }));
+            previousScaleY = (int)scale.Y; 
+
+            PromptSelectionOptions options = new PromptSelectionOptions { MessageForAdding = $"\nVyberte všechny 3DFace: " };
+            PromptSelectionResult evResult = editor.GetSelection(options, new SelectionFilter(new[] { new TypedValue((int)DxfCode.Start, "3DFACE") }));
             if (evResult.Status != PromptStatus.OK) goto user_closed_dialog;
             var __faces = evResult.Value;
             if (__faces.Count == 0) goto no_data;
+
             Call(t =>
             {
                 if (!t.TryGet(__curve, out Curve curve)) goto local_no_data;
+                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
                 Point3dCollection vertice = GetPolylineVertices(t, curve);
                 if (vertice.Count < 2) goto local_no_data;
                 if (curve.Closed) vertice.Add(vertice[0]);
@@ -373,9 +382,7 @@ namespace BcToolsC.BCad.Commands
                             }
                         }
                         catch (Exception exception)
-                        {
-                            editor.Error("Chyba; " + exception.Message);
-                        }
+                        { Console.WriteLine(exception.Message); }
                     }
                     progress.Stop();
                 }
@@ -456,33 +463,36 @@ namespace BcToolsC.BCad.Commands
             editor.Warn("Nebyla nalazena žádná data.");
             return;
         user_closed_dialog:
-            editor.Warn("Výběr byl zrušen uživatelem mezi monitorem a židlí.");
+            editor.Warn("Výběr byl zrušen uživatelem.");
             return;
         }
 
         [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE_DT4")]
         public void Mc_ProfileDt4()
         {
-
+            if (!BcApp.IsAppProperlyInitialized) return;
         }
 
-        private List<Point3d> Profiler_CollectIntersectsWith(Geometry intersection,
+        private static List<Point3d> Profiler_CollectIntersectsWith(Geometry intersection,
             int recursiveDepth = 0)
         {
             List<Point3d> result = new List<Point3d>();
-            if (recursiveDepth >= 3) return result;
+            if (recursiveDepth >= 3 || intersection.IsEmpty) return result;
             switch (intersection)
             {
                 case Point i:
                     var i0 = i.Coordinate;
+                    if (i0 == null) return result;
                     result.Add(new Point3d(i0.X, i0.Y, i0.Z));
                     break;
                 case LineString i:
-                    var i2 = i.StartPoint.Coordinate;
-                    result.Add(new Point3d(i2.X, i2.Y, i2.Z));
-                    i2 = i.EndPoint.Coordinate;
-                    result.Add(new Point3d(i2.X, i2.Y, i2.Z));
+                    var i21 = i.StartPoint?.Coordinate;
+                    var i22 = i.EndPoint?.Coordinate;
+                    if (i21 == null || i22 == null) return result;
+                    result.Add(new Point3d(i21.X, i21.Y, i21.Z));
+                    result.Add(new Point3d(i22.X, i22.Y, i22.Z));
                     break;
+                // Další druhy geometrie pro náš účel není třeba řešit
                 default:
                     break;
             }

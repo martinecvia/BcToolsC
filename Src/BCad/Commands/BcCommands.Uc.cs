@@ -17,8 +17,9 @@ namespace BcToolsC.BCad.Commands
     public partial class BcCommands
     {
         [AcRun.CommandMethod("BCTOOLSC_UC_UCS")]
-        public void _ChangeUcs()
+        public void Uc_ChangeUcs()
         {
+            if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
             if (document == null) return;
             Database db = document.Database;

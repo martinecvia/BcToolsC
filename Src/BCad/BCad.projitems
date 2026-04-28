@@ -14,6 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Kn.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Mc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Rf.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Sv.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Tf.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Uc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
