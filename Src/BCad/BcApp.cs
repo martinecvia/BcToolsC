@@ -18,6 +18,8 @@ using AcDb = ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.Runtime;
 using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Geometry;
+
+using ZwSoft.ZwCAD.Windows;
 #else
 using AcadApplication = Autodesk.AutoCAD.Interop.AcadApplication;
 using AcadDocument = Autodesk.AutoCAD.Interop.AcadDocument;
@@ -29,6 +31,8 @@ using AcDb  = Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
+
+using Autodesk.AutoCAD.Windows;
 #endif
 #endregion
 
@@ -36,6 +40,7 @@ using BcToolsC.BCad.Commands;
 using BcToolsC.Models;
 using BcToolsC.Helpers;
 using NetTopologySuite;
+using BcToolsC.BCad.Inspector;
 
 [assembly: CommandClass(typeof(BcToolsC.BCad.BcApp))]
 namespace BcToolsC.BCad
@@ -44,7 +49,7 @@ namespace BcToolsC.BCad
     // https://keanw.com/2015/01/using-environment-variables-inside-autocad-file-path-options.html
     public class BcApp : IExtensionApplication
     {
-        public static string Version => "BcToolsC.NET / 1.0.2604.24-test";
+        public static string Version => "BcToolsC.NET / 1.0.2605.01-release";
         public static AcadApplication ThisApplication => (AcadApplication)Application.AcadApplication;
         public static AcadDocument ThisDrawing => (AcadDocument)DocumentExtension.GetAcadDocument(Document);
         public static AcadUCS ThisUCS => (AcadUCS)ThisDrawing.ActiveUCS;
@@ -60,12 +65,20 @@ namespace BcToolsC.BCad
         public static bool IsAppProperlyInitialized { get; private set; }
         public static AcDb.Extents2d Envelope { get; private set; }
 
+        static BcAppInspector defaultInspector; // Default
+        static BcAppInspector generalInspector; // Pro objekty jako takové
+
         public void Initialize()
         {
             Document document = Document
                 ?? throw new InvalidOperationException("not loaded yet!");
             Editor editor = document.Editor;
-            AllocConsole();
+#if DEBUG
+            // Zobrazení pro vývojáøe, nemìlo by se objevit v produkci
+            var pc = Environment.MachineName;
+            if (string.Compare(pc, "MARTINCOPLKFB20", true) == 0 || string.Compare(pc, "PC-COPLAK2026",   true) == 0)
+                AllocConsole();
+#endif
             try
             {
                 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
@@ -118,6 +131,9 @@ namespace BcToolsC.BCad
                 Envelope = new AcDb.Extents2d(new Point2d(minX, minY), new Point2d(maxX, maxY));
                 BcCommands.Rf_TypeArray_Cz = vertexes;
                 NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
+                defaultInspector = new BcAppInspector("Inspektor", new MenuItem("Entity"), new MenuItem("Database"), new MenuItem("Table"), new MenuItem("Dictionary"));
+                generalInspector = new BcAppInspector("Informace");
+                AcApp.Application.AddDefaultContextMenuExtension(defaultInspector); AcApp.Application.AddObjectContextMenuExtension(Entity, generalInspector);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +
@@ -139,7 +155,9 @@ namespace BcToolsC.BCad
 
         public void Terminate() 
         {
-
+            if (defaultInspector != null) AcApp.Application.RemoveDefaultContextMenuExtension(defaultInspector);
+            if (generalInspector != null)
+                AcApp.Application.RemoveObjectContextMenuExtension(Entity, generalInspector);
         }
 
         // syscall pro otevøeni konzole

@@ -6,8 +6,19 @@
     <SharedGUID>78a45648-8876-41fb-99aa-08e2832927ad</SharedGUID>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <Import_RootNamespace>BCadObjectInspector</Import_RootNamespace>
+    <Import_RootNamespace>BcToolsC.BCad.Inspector</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)BcApp.Inspector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Inspector.xaml.cs">
+      <DependentUpon>Inspector.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)ViewModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)\Inspector.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
 </Project>

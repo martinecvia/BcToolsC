@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.4.11612.150
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BcToolsC", "Src\Common\BcToolsC.shproj", "{722A50B8-8225-45F0-B14C-493935397047}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Common", "Src\Common\Common.shproj", "{722A50B8-8225-45F0-B14C-493935397047}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcToolsZC25", "BuildsTargets\BcToolsZC25\BcToolsZC25.csproj", "{2C35248C-D99B-4739-A396-CF3CA3E4B8CD}"
 EndProject
@@ -22,6 +22,8 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Topology", "Src\Topology\Topology.shproj", "{B71445C8-B7A7-4660-9E89-245CC4AE9761}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "BCadObjectInspector", "Src\BCadObjectInspector\BCadObjectInspector.shproj", "{78A45648-8876-41FB-99AA-08E2832927AD}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "RibbonXml", "RibbonXml\Shared\RibbonXml.shproj", "{E12BFDD6-C393-4D7C-A138-72372C23BBBC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,9 +51,13 @@ Global
 		SolutionGuid = {55F0F8B4-9EC9-4888-9903-7D3DA965A226}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		RibbonXml\Shared\Shared.projitems*{2c35248c-d99b-4739-a396-cf3ca3e4b8cd}*SharedItemsImports = 4
+		Src\BCadObjectInspector\BCadObjectInspector.projitems*{2c35248c-d99b-4739-a396-cf3ca3e4b8cd}*SharedItemsImports = 4
 		Src\BCad\BCad.projitems*{2c35248c-d99b-4739-a396-cf3ca3e4b8cd}*SharedItemsImports = 4
 		Src\Common\Common.projitems*{2c35248c-d99b-4739-a396-cf3ca3e4b8cd}*SharedItemsImports = 4
 		Src\Topology\Topology.projitems*{2c35248c-d99b-4739-a396-cf3ca3e4b8cd}*SharedItemsImports = 4
+		RibbonXml\Shared\Shared.projitems*{3b4e07f6-eede-4098-8b89-ceb8b06016e5}*SharedItemsImports = 5
+		Src\BCadObjectInspector\BCadObjectInspector.projitems*{3b4e07f6-eede-4098-8b89-ceb8b06016e5}*SharedItemsImports = 5
 		Src\BCad\BCad.projitems*{3b4e07f6-eede-4098-8b89-ceb8b06016e5}*SharedItemsImports = 5
 		Src\Common\Common.projitems*{3b4e07f6-eede-4098-8b89-ceb8b06016e5}*SharedItemsImports = 5
 		Src\Topology\Topology.projitems*{3b4e07f6-eede-4098-8b89-ceb8b06016e5}*SharedItemsImports = 5
@@ -60,5 +66,6 @@ Global
 		Src\Common\Common.projitems*{722a50b8-8225-45f0-b14c-493935397047}*SharedItemsImports = 13
 		Src\BCadObjectInspector\BCadObjectInspector.projitems*{78a45648-8876-41fb-99aa-08e2832927ad}*SharedItemsImports = 13
 		Src\Topology\Topology.projitems*{b71445c8-b7a7-4660-9e89-245cc4ae9761}*SharedItemsImports = 13
+		RibbonXml\Shared\Shared.projitems*{e12bfdd6-c393-4d7c-a138-72372c23bbbc}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

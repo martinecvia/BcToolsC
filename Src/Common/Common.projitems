@@ -25,6 +25,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Resources\" />
     <Folder Include="$(MSBuildThisFileDirectory)Properties\" />
   </ItemGroup>
 </Project>
