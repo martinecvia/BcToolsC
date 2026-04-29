@@ -15,6 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "BuildsTargets\U
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4A2B95E3-2BA6-4060-83FA-AE5DED7FF566}"
 	ProjectSection(SolutionItems) = preProject
+		.github\workflows\ms-build.yml = .github\workflows\ms-build.yml
 		odkazy.txt = odkazy.txt
 		WGS_JTSK.pdf = WGS_JTSK.pdf
 	EndProjectSection
