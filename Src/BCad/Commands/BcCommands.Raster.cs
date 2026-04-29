@@ -78,8 +78,7 @@ namespace BcToolsC.BCad.Commands
                 if (string.IsNullOrWhiteSpace(json))
                     throw new Exception("Prázdná odpověď serveru.");
                 response = Deserialize<AtomicEntries>(json);
-            }
-            catch (Exception exception)
+            } catch (Exception exception)
             { editor.Error("Chyba; " + exception.Message); return; }
             if (response?.Entries == null || response.Entries.Count == 0)
             {
