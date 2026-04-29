@@ -30,7 +30,7 @@ using Autodesk.AutoCAD.EditorInput;
 
 using BcToolsC.BCad.Commands;
 using BcToolsC.Models;
-
+using BcToolsC.Helpers;
 using NetTopologySuite;
 
 [assembly: CommandClass(typeof(BcToolsC.BCad.BcApp))]
@@ -96,7 +96,7 @@ namespace BcToolsC.BCad
                         editor.Error($"Získání informace o platformì selhalo; Výjimka: {exception}\n");
                     }
                 }
-                BcCommands.Rf_TypeArray_Cz = BcCommands.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
+                BcCommands.Rf_TypeArray_Cz = CompressHelper.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
                 NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +

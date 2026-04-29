@@ -22,8 +22,7 @@ namespace BcToolsC.BCad.Transactions
             string linetype = "Continuous", double linetypeWidth = 0.0, double linetypeScale = 1.0, bool linetypeGeneration = false,
             LAYER? layer = null,
             COLOR? color = null,
-            ANGLE? angle = null,
-            bool shouldBeClosed = false)
+            ANGLE? angle = null)
             => AddLWPolyline(
 #if NET8_0_OR_GREATER
                 [start, end],
@@ -32,6 +31,17 @@ namespace BcToolsC.BCad.Transactions
 #endif
                 linetype, linetypeWidth, linetypeScale, linetypeGeneration,
                 layer, color, angle, false);
+
+        public Polyline AddLWPolyline(double[,] vertexes,
+            string linetype = "Continuous", double linetypeWidth = 0.0, double linetypeScale = 1.0, bool linetypeGeneration = false,
+            LAYER? layer = null,
+            COLOR? color = null,
+            ANGLE? angle = null,
+            bool shouldBeClosed = false)
+            => AddLWPolyline(
+                ConvertToPoint(vertexes),
+                linetype, linetypeWidth, linetypeScale, linetypeGeneration,
+                layer, color, angle, shouldBeClosed);
 
         public Polyline AddLWPolyline<T>(IEnumerable<T> vertexes,
             string linetype = "Continuous", double linetypeWidth = 0.0, double linetypeScale = 1.0, bool linetypeGeneration = false,
@@ -72,6 +82,16 @@ namespace BcToolsC.BCad.Transactions
             result.Plinegen = linetypeGeneration;
             result.Color = EnsureColor(color);
             return result;
+        }
+
+        private IEnumerable<Point2d> ConvertToPoint(double[,] vertexes)
+        {
+            if (vertexes == null) yield break;
+            int rows = vertexes.GetLength(0);
+            int cols = vertexes.GetLength(1);
+            if (cols != 2) yield break;
+            for (int i = 0; i < rows; i++)
+                yield return new Point2d(vertexes[i, 0], vertexes[i, 1]);
         }
     }
 }

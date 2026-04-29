@@ -26,6 +26,9 @@ using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
 using BcToolsC.BCad.Transactions;
 using NetTopologySuite.Geometries;
+using System.Windows;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 [assembly: AcRun.CommandClass(typeof(BcToolsC.BCad.Commands.BcCommands))]
 namespace BcToolsC.BCad.Commands
@@ -355,6 +358,120 @@ namespace BcToolsC.BCad.Commands
             else
                 epsg = SJTSK_WGS84(x, y);
             return epsg;
+        }
+
+        static bool TrySelectEntry(Editor editor, AtomicEntries atom,
+            string splitString,
+            out AtomicEntries.Entry entry)
+        {
+            entry = default;
+            if (atom.Entries.Count == 1)
+            {
+                entry = atom.Entries[0];
+                return true;
+            }
+            List<string> names = new List<string>();
+            foreach (var e in atom.Entries)
+            {
+                var parts = Regex.Split(e.Name, splitString);
+                if (parts.Length > 1) names.Add(parts[1]);
+            }
+            if (names.Count == 0) return false;
+            var selected = GetKeywordFromPrompt(editor, "Vyberte mapový list", names.ToArray());
+            if (string.IsNullOrEmpty(selected))
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return false;
+            }
+            entry = atom.Entries.FirstOrDefault(e => e.Name.Contains(selected));
+            return entry != null;
+        }
+
+        static bool GetFileOverrideAnswerFromPrompt()
+        {
+            MessageBoxResult result = MessageBox.Show(
+                "Soubor se už v adresáři nachází!",
+                "Přepsat?",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question,
+                MessageBoxResult.No);
+            return result == MessageBoxResult.Yes;
+        }
+
+        static bool ValidateModelSpace(Editor editor, Database database)
+        {
+            if (database.TileMode)
+                return true;
+            editor.Warn("Povoleno pouze v modelovém prostoru.");
+            return false;
+        }
+
+        static bool ValidateDrawingPath(Editor editor, 
+            out string lsPath)
+        {
+            lsPath = BcApp.CurrentDirectory;
+            if (!string.IsNullOrEmpty(lsPath))
+                return true;
+            editor.Error("Výkres musí být před použitím příkazu uložený!");
+            return false;
+        }
+
+        static bool ValidateDirectoryWritable(Editor editor, string lsPath)
+        {
+            if (CanWrite(lsPath))
+                return true;
+            editor.Warn("Adresář není zapisovatelný!");
+            return false;
+        }
+
+        static bool TryZoomToExtents(Editor editor, Extents3d? __extents)
+        {
+            try
+            {
+                if (__extents == null) return false;
+                var extents = __extents.Value;
+                using (ViewTableRecord view = editor.GetCurrentView())
+                {
+                    if (view == null) return false;
+
+                    // Transformace do device coordinate system
+                    Matrix3d transform =
+                        Matrix3d.WorldToPlane(view.ViewDirection) *
+                        Matrix3d.Displacement(view.Target.GetAsVector().Negate()) *
+                        Matrix3d.Rotation(-view.ViewTwist, view.ViewDirection, view.Target);
+                    Point3d min = extents.MinPoint.TransformBy(transform);
+                    Point3d max = extents.MaxPoint.TransformBy(transform);
+                    double w = max.X - min.X;
+                    double h = max.Y - min.Y;
+
+                    // Zobrazované entity jsou příliš malé
+                    if (w <= Tolerance.Global.EqualPoint ||
+                        h <= Tolerance.Global.EqualPoint)
+                        return false;
+
+                    // Korekce poměru stran okna
+                    double viewAspect = view.Width / view.Height;
+                    double zoomAspect = w / h;
+                    if (zoomAspect > viewAspect)
+                        h = w / viewAspect;
+                    else
+                        w = h * viewAspect;
+
+                    // Nastavení pohledu (malá rezerva kolem entity)
+                    const double MARGIN = 1.005;
+                    view.CenterPoint = new Point2d(
+                        (min.X + max.X) * 0.5,
+                        (min.Y + max.Y) * 0.5);
+
+                    // Necháváme zhruba 5% rezervu
+                    view.Width = w * MARGIN;
+                    view.Height = h * MARGIN;
+                    editor.SetCurrentView(view);
+                    return true;
+                }
+            } catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); }
+            return false;
         }
     }
 }
