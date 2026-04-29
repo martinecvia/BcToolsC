@@ -11,7 +11,7 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Cuzk.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Cadaster.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Profile.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.DisplayRelief.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Maps.cs" />

@@ -1,8 +1,8 @@
+#pragma warning disable
 using System; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
 using System.IO;
-using System.Windows;
 using System.Globalization;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM

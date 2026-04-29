@@ -10,6 +10,7 @@ using System.IO;
 #if ZWCAD
 using AcadApplication = ZWCAD.ZcadApplication;
 using AcadDocument = ZWCAD.ZcadDocument;
+using AcadUCS = ZWCAD.ZcadUCS;
 
 using AcApp = ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.ApplicationServices;
@@ -20,6 +21,7 @@ using ZwSoft.ZwCAD.Geometry;
 #else
 using AcadApplication = Autodesk.AutoCAD.Interop.AcadApplication;
 using AcadDocument = Autodesk.AutoCAD.Interop.AcadDocument;
+using AcadUCS = Autodesk.AutoCAD.Interop.Common.AcadUCS;
 
 using AcApp = Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.ApplicationServices;
@@ -45,6 +47,7 @@ namespace BcToolsC.BCad
         public static string Version => "BcToolsC.NET / 1.0.2604.24-test";
         public static AcadApplication ThisApplication => (AcadApplication)Application.AcadApplication;
         public static AcadDocument ThisDrawing => (AcadDocument)DocumentExtension.GetAcadDocument(Document);
+        public static AcadUCS ThisUCS => (AcadUCS)ThisDrawing.ActiveUCS;
         // Platforma, pro kterou máme spuštìnou instanci
         public static bool IsAcad { get; private set; }
         public static Document Document => AcApp.Core.Application.DocumentManager.MdiActiveDocument;

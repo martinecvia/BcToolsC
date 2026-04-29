@@ -1,4 +1,4 @@
-#pragma warning disable IDE0028, IDE0063, IDE0079, IDE0090, CS8600, CS8603, CS8618
+#pragma warning disable
 using System; // Keep for .NET 4.6
 using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
@@ -377,7 +377,9 @@ namespace BcToolsC.BCad.Commands
             string splitString,
             out AtomicEntries.Entry entry)
         {
-            entry = default;
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+            entry = null;
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             if (atom.Entries.Count == 1)
             {
                 entry = atom.Entries[0];
@@ -396,7 +398,9 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return false;
             }
+#pragma warning disable CS8601 // Possible null reference assignment.
             entry = atom.Entries.FirstOrDefault(e => e.Name.Contains(selected));
+#pragma warning restore CS8601 // Possible null reference assignment.
             return entry != null;
         }
 
@@ -433,23 +437,6 @@ namespace BcToolsC.BCad.Commands
             editor.Warn("Bod leží mimo reliéf.");
             return false;
         }
-
-        static bool ValidatePointInsideRelief(Editor editor, Point2d __point, out Point2d point)
-        {
-            var envelope = BcApp.Envelope;
-            // Transformace do správného souřadnicového systému
-            Matrix3d transform = editor.CurrentUserCoordinateSystem;
-            var point3d = new Point3d(__point.X, __point.Y, 0.0).TransformBy(transform);
-            point = new Point2d(point3d.X, point3d.Y);
-            var min = envelope.MinPoint;
-            var max = envelope.MaxPoint;
-            bool inside = point.X > min.X && point.X < max.X &&
-                point.Y > min.Y && point.Y < max.Y;
-            if (inside) return true;
-            editor.Warn("Bod leží mimo reliéf.");
-            return false;
-        }
-
 
         static bool ValidateDrawingPath(Editor editor, 
             out string lsPath)
