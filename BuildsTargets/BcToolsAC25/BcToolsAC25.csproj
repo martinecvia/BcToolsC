@@ -28,13 +28,6 @@
   <Import Project="..\..\Src\BCadObjectInspector\BCadObjectInspector.projitems" Label="Shared" />
   <Import Project="..\..\RibbonXml\Shared\Shared.projitems" Label="Shared" />
   <ItemGroup>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <Reference Include="accoremgd">
       <HintPath>..\..\CadReferences\2025\accoremgd.dll</HintPath>
 	  <Private>False</Private>
@@ -67,10 +60,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
     <None Update="start.scr">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

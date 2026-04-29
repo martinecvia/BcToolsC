@@ -27,6 +27,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "RibbonXml", "RibbonXml\Shar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcToolsZC26", "BuildsTargets\BcToolsZC26\BcToolsZC26.csproj", "{280310C0-90A0-47DB-985A-B3BEB0C40E92}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcToolsAC26", "BuildsTargets\BcToolsAC26\BcToolsAC26.csproj", "{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 		{280310C0-90A0-47DB-985A-B3BEB0C40E92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{280310C0-90A0-47DB-985A-B3BEB0C40E92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{280310C0-90A0-47DB-985A-B3BEB0C40E92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -77,6 +83,11 @@ Global
 		Src\Common\Common.projitems*{722a50b8-8225-45f0-b14c-493935397047}*SharedItemsImports = 13
 		Src\BCadObjectInspector\BCadObjectInspector.projitems*{78a45648-8876-41fb-99aa-08e2832927ad}*SharedItemsImports = 13
 		Src\Topology\Topology.projitems*{b71445c8-b7a7-4660-9e89-245cc4ae9761}*SharedItemsImports = 13
+		RibbonXml\Shared\Shared.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
+		Src\BCadObjectInspector\BCadObjectInspector.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
+		Src\BCad\BCad.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
+		Src\Common\Common.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
+		Src\Topology\Topology.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
 		RibbonXml\Shared\Shared.projitems*{e12bfdd6-c393-4d7c-a138-72372c23bbbc}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

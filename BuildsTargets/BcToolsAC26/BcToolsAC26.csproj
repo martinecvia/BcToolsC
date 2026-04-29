@@ -1,0 +1,71 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<RootNamespace>BcToolsC</RootNamespace>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<OutputType>Library</OutputType>
+		<UseWindowsForms>true</UseWindowsForms>
+		<UseWPF>true</UseWPF>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<GenerateAssemblyFileVersion>false</GenerateAssemblyFileVersion>
+		<GenerateAssemblyVersion>false</GenerateAssemblyVersion>
+		<GenerateAssemblyTitle>false</GenerateAssemblyTitle>
+		<GenerateAssemblyDescription>false</GenerateAssemblyDescription>
+		<GenerateAssemblyCompany>false</GenerateAssemblyCompany>
+		<GenerateAssemblyProduct>false</GenerateAssemblyProduct>
+		<GenerateAssemblyCopyright>false</GenerateAssemblyCopyright>
+		<GenerateAssemblyTrademark>false</GenerateAssemblyTrademark>
+		<AssemblyName>BcToolsAC26.0</AssemblyName>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
+	<Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />
+	<Import Project="..\..\Src\Topology\Topology.projitems" Label="Shared" />
+	<Import Project="..\..\Src\BCadObjectInspector\BCadObjectInspector.projitems" Label="Shared" />
+	<Import Project="..\..\RibbonXml\Shared\Shared.projitems" Label="Shared" />
+	<ItemGroup>
+		<Reference Include="accoremgd">
+			<HintPath>..\..\CadReferences\2026\accoremgd.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Acdbmgd">
+			<HintPath>..\..\CadReferences\2026\acdbmgd.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="acdbmgdbrep">
+			<HintPath>..\..\CadReferences\2026\acdbmgdbrep.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Acmgd">
+			<HintPath>..\..\CadReferences\2026\acmgd.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="AdWindows">
+			<HintPath>..\..\CadReferences\2026\AdWindows.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Autodesk.AutoCAD.Interop">
+			<HintPath>..\..\CadReferences\2026\Autodesk.AutoCAD.Interop.dll</HintPath>
+			<Private>False</Private>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+		</Reference>
+		<Reference Include="Autodesk.AutoCAD.Interop.Common">
+			<HintPath>..\..\CadReferences\2026\Autodesk.AutoCAD.Interop.Common.dll</HintPath>
+			<EmbedInteropTypes>True</EmbedInteropTypes>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="Properties\Settings.settings">
+			<Generator>SettingsSingleFileGenerator</Generator>
+			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
+		</None>
+		<None Update="start.scr">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+</Project>

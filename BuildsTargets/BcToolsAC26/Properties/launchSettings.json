@@ -2,7 +2,7 @@
   "profiles": {
     "Start": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\Autodesk\\AutoCAD 2025\\acad.exe",
+      "executablePath": "C:\\Program Files\\Autodesk\\AutoCAD 2026\\acad.exe",
       "commandLineArgs": "/b start.scr"
     }
   }
