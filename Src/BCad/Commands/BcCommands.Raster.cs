@@ -1,14 +1,9 @@
 using System; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
-using System.Text.RegularExpressions;
 using System.IO;
 using System.Windows;
 using System.Globalization;
-using BcToolsC.BCad.Transactions;
-using ZwSoft.ZwCAD.GraphicsInterface;
-
-
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -27,6 +22,7 @@ using Autodesk.AutoCAD.EditorInput;
 #endregion
 
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+using BcToolsC.BCad.Transactions;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -42,7 +38,7 @@ namespace BcToolsC.BCad.Commands
             { "250000", "ZTM250-SJTSK-TIFF" },
         };
 
-        [AcRun.CommandMethod("BCTOOLSC_TF_DOWN")]
+        [AcRun.CommandMethod("BCTOOLSC_TF_DW")]
         public void Tf_DownloadTiff()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
@@ -61,15 +57,13 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
             var __theme = GetKeywordFromPrompt(editor, "Vyberte měřítko", Tf_TypeThemeMap.Keys.ToArray());
             if (string.IsNullOrEmpty(__theme) || !Tf_TypeThemeMap.TryGetValue(__theme, out string theme))
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-            // Transformace do správného souřadnicového systému
-            Matrix3d wgsu = editor.CurrentUserCoordinateSystem;
-            Point3d point = __point.Value.TransformBy(wgsu);
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
@@ -78,6 +72,7 @@ namespace BcToolsC.BCad.Commands
             {
                 string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
                     theme, wgs84.L, wgs84.B);
+                Console.WriteLine(url);
                 editor.Info("Kontaktuji ... https://atom.cuzk.cz");
                 string json = DownloadString(url);
                 if (string.IsNullOrWhiteSpace(json))
@@ -95,25 +90,6 @@ namespace BcToolsC.BCad.Commands
             // Výběr konkrétního mapového listu
             if (!TrySelectEntry(editor, response, "mapový list: ", out AtomicEntries.Entry entry))
                 return;
-            string tfwFile = Path.ChangeExtension(
-                Path.GetFileName(new Uri(entry.Link).LocalPath),
-                ".tfw");
-            string tfwPath = Path.Combine(dir, tfwFile);
-
-            // Kontrola zda soubor náhodou již existuje
-            if (File.Exists(tfwPath))
-            {
-                if (!GetFileOverrideAnswerFromPrompt()) return;
-                if (IsLocked(tfwPath))
-                {
-                    MessageBox.Show(
-                       "Soubor je právě používán jiným procesem nebo je zamčený pro zápis.",
-                       "Soubor nelze přepsat",
-                       MessageBoxButton.OK,
-                       MessageBoxImage.Warning);
-                    return;
-                }
-            }
 
             // Stažení dat
             byte[] data = DownloadDataWithProgress(entry.Link);
@@ -124,11 +100,15 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Rozbalení a vložení do výkresu
-            if (!TryUnzipData(data, dir, out string tifPath))
+            if (!TryUnzipData(data, dir, out string anyFile))
             {
                 editor.Error("Chyba; Nepovedlo se uložit soubor.");
                 return;
             }
+
+            // Změna cest, soubory můžou mít jiné jméno souborů než je název archivu
+            string tfwPath = Path.ChangeExtension(anyFile, ".tfw");
+            string tifPath = Path.ChangeExtension(anyFile, ".tif");
             try
             {
                 // Načtení a přečtení dat ze souboru TFW
@@ -147,8 +127,8 @@ namespace BcToolsC.BCad.Commands
             { editor.Error("Chyba; " + exception.Message); }
         }
 
-        [AcRun.CommandMethod("BCTOOLSC_TF_SEAT")]
-        public void Tf_ApplyTiff()
+        [AcRun.CommandMethod("BCTOOLSC_TF_ST")]
+        public void Tf_SeatTiff()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
@@ -187,7 +167,6 @@ namespace BcToolsC.BCad.Commands
             });
         }
 
-        #region HELPERS
         private double[] ParseTfwData(string[] tfwData)
         {
             return new[]
@@ -209,7 +188,7 @@ namespace BcToolsC.BCad.Commands
                 dictId = RasterImageDef.CreateImageDictionary(t.Database);
             if (!t.TryGet(dictId, out DBDictionary dict))
                 throw new InvalidOperationException("Databáze rastrových obrázků není dostupná");
-            string tifPath = ResolveImagePath(key, dir);
+            string tifPath = ResolvePath(key, dir);
             key = Path.GetFileNameWithoutExtension(key);
             if (dict.Contains(key))
                 return;
@@ -254,7 +233,7 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Získání potřebných cest
-            string tifPath = ResolveImagePath(rasterDef.ActiveFileName, dir);
+            string tifPath = ResolvePath(rasterDef.ActiveFileName, dir);
             if (string.IsNullOrEmpty(tifPath))
             {
                 editor.Warn("Chyba; Nepovedlo se najít cestu k: " + raster?.Name);
@@ -282,20 +261,5 @@ namespace BcToolsC.BCad.Commands
             t.MoveToBottom(raster);
             editor.Ok("Ok; Obrázek byl vložen.");
         }
-
-        private string ResolveImagePath(string lsPath, string dir)
-        {
-            if (string.IsNullOrEmpty(lsPath)) return null;
-            // Absolutní cesta
-            if (Path.IsPathRooted(lsPath) && File.Exists(lsPath))
-                return lsPath;
-            // Relativní cesta - vázaná na adresář výkresu
-            if (string.IsNullOrEmpty(dir)) return null;
-            string rlPath = Path.GetFullPath(Path.Combine(dir, lsPath));
-            if (File.Exists(rlPath))
-                return rlPath;
-            return null;
-        }
-        #endregion
     }
 }

@@ -29,7 +29,8 @@ namespace BcToolsC.BCad.Commands
         public void Mp_Map_GoogleMaps() => ShowMapFor("https://www.google.com", "/maps/search/?api=1&query={0},{1}");
         [AcRun.CommandMethod("BCTOOLSC_MP_MC")]
         public void Mp_StreetView_Mapy() => ShowMapFor("https://mapy.com", "/fnc/v1/showmap?mapset=basic&center={1},{0}&zoom=16&marker=true");
-        void ShowMapFor(string provider, string endpoint)
+
+        private void ShowMapFor(string provider, string endpoint)
         {
             if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
@@ -44,16 +45,14 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-
-            // Transformace do správného souřadnicového systému
-            Matrix3d transform = editor.CurrentUserCoordinateSystem;
-            Point3d point = __point.Value.TransformBy(transform);
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
             // Převedení S-JTSK souřadnic do WGS-84
             __4326 wgs84 = GetWGS84FromPoint(point);
             try
             {
                 string url = string.Format(endpoint,
                     wgs84.B, wgs84.L);
+                Console.WriteLine(url);
                 editor.Info("Kontaktuji ... " + provider);
                 Process.Start(new ProcessStartInfo
                 {

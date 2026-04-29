@@ -16,6 +16,7 @@ using ZwSoft.ZwCAD.ApplicationServices;
 using AcDb = ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.Runtime;
 using ZwSoft.ZwCAD.EditorInput;
+using ZwSoft.ZwCAD.Geometry;
 #else
 using AcadApplication = Autodesk.AutoCAD.Interop.AcadApplication;
 using AcadDocument = Autodesk.AutoCAD.Interop.AcadDocument;
@@ -25,6 +26,7 @@ using Autodesk.AutoCAD.ApplicationServices;
 using AcDb  = Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.EditorInput;
+using Autodesk.AutoCAD.Geometry;
 #endif
 #endregion
 
@@ -53,6 +55,7 @@ namespace BcToolsC.BCad
             : Path.GetTempPath();
 #pragma warning restore CS8603 // Possible null reference return.
         public static bool IsAppProperlyInitialized { get; private set; }
+        public static AcDb.Extents2d Envelope { get; private set; }
 
         public void Initialize()
         {
@@ -96,7 +99,21 @@ namespace BcToolsC.BCad
                         editor.Error($"Získání informace o platformì selhalo; Výjimka: {exception}\n");
                     }
                 }
-                BcCommands.Rf_TypeArray_Cz = CompressHelper.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
+                var vertexes = CompressHelper.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
+                int rows = vertexes.GetLength(0);
+                double minX = .0, maxX = .0;
+                double minY = .0, maxY = .0;
+                for (int i = 0; i < rows; i++)
+                {
+                    double x = vertexes[i, 0];
+                    double y = vertexes[i, 1];
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                }
+                Envelope = new AcDb.Extents2d(new Point2d(minX, minY), new Point2d(maxX, maxY));
+                BcCommands.Rf_TypeArray_Cz = vertexes;
                 NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpùrných nástrojù pro projektanty" +

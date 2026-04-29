@@ -73,7 +73,6 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Povoleno pouze v modelovém prostoru.");
                 return;
             }
-            Matrix3d ucs = editor.CurrentUserCoordinateSystem;
             var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
             typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
             if (__curve == ObjectId.Null)
@@ -87,7 +86,7 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
-            var point = __point.Value.TransformBy(ucs);
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
             var __cdata = GetCurve(__curve);
             if (__cdata == null)
             {
@@ -378,13 +377,13 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return false;
             }
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return false;
             var __theme = GetKeywordFromPrompt(editor, "Vyberte formát", options);
             if (string.IsNullOrEmpty(__theme))
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return false;
             }
-            var point = __point.Value;
             if (Kn_TypeThemeMap.TryGetValue(__theme, out string theme))
             {
                 var wgs84 = GetWGS84FromPoint(point);

@@ -234,9 +234,9 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        static bool TryUnzipData(byte[] data, string lsPath, out string __saved)
+        static bool TryUnzipData(byte[] data, string dir, out string anyFile)
         {
-            __saved = default;
+            anyFile = default;
             if (data == null || data.Length == 0)
                 return false;
             try
@@ -246,11 +246,24 @@ namespace BcToolsC.BCad.Commands
                 {
                     foreach (var zipEntry in archive.Entries)
                     {
-                        var zipPath = Path.Combine(lsPath, zipEntry.Name);
+                        var zipPath = Path.Combine(dir, zipEntry.Name);
+                        if (File.Exists(zipPath))
+                        {
+                            if (!GetFileOverrideAnswerFromPrompt()) return false;
+                            if (IsLocked(zipPath))
+                            {
+                                MessageBox.Show(
+                                   "Soubor je právě používán jiným procesem nebo je zamčený pro zápis.",
+                                   "Soubor nelze přepsat",
+                                   MessageBoxButton.OK,
+                                   MessageBoxImage.Warning);
+                                return false;
+                            }
+                        }
                         using (var entryStream = zipEntry.Open())
                         using (var filesStream = File.Create(zipPath))
                         {
-                            __saved = zipPath;
+                            anyFile = zipPath;
                             entryStream.CopyTo(filesStream);
                         }
                     }
@@ -258,7 +271,7 @@ namespace BcToolsC.BCad.Commands
             }
             catch (Exception exception)
             { Console.WriteLine(exception.Message); }
-            return !string.IsNullOrEmpty(__saved);
+            return !string.IsNullOrEmpty(anyFile);
         }
 
         static bool IsLocked(string lsFile)
@@ -276,9 +289,9 @@ namespace BcToolsC.BCad.Commands
             return true;
         }
 
-        static bool CanWrite(string lsPath)
+        static bool CanWrite(string dir)
         {
-            string lsFile = Path.Combine(lsPath, Path.GetRandomFileName());
+            string lsFile = Path.Combine(dir, Path.GetRandomFileName());
             try
             {
                 using (FileStream stream = File.Create(lsFile, 1, FileOptions.DeleteOnClose))
@@ -406,6 +419,38 @@ namespace BcToolsC.BCad.Commands
             return false;
         }
 
+        static bool ValidatePointInsideRelief(Editor editor, Point3d __point, out Point3d point)
+        {
+            var envelope = BcApp.Envelope;
+            // Transformace do správného souřadnicového systému
+            Matrix3d transform = editor.CurrentUserCoordinateSystem;
+            point = __point.TransformBy(transform);
+            var min = envelope.MinPoint;
+            var max = envelope.MaxPoint;
+            bool inside = point.X > min.X && point.X < max.X &&
+                point.Y > min.Y && point.Y < max.Y;
+            if (inside) return true;
+            editor.Warn("Bod leží mimo reliéf.");
+            return false;
+        }
+
+        static bool ValidatePointInsideRelief(Editor editor, Point2d __point, out Point2d point)
+        {
+            var envelope = BcApp.Envelope;
+            // Transformace do správného souřadnicového systému
+            Matrix3d transform = editor.CurrentUserCoordinateSystem;
+            var point3d = new Point3d(__point.X, __point.Y, 0.0).TransformBy(transform);
+            point = new Point2d(point3d.X, point3d.Y);
+            var min = envelope.MinPoint;
+            var max = envelope.MaxPoint;
+            bool inside = point.X > min.X && point.X < max.X &&
+                point.Y > min.Y && point.Y < max.Y;
+            if (inside) return true;
+            editor.Warn("Bod leží mimo reliéf.");
+            return false;
+        }
+
+
         static bool ValidateDrawingPath(Editor editor, 
             out string lsPath)
         {
@@ -472,6 +517,21 @@ namespace BcToolsC.BCad.Commands
             } catch (Exception exception)
             { editor.Error("Chyba; " + exception.Message); }
             return false;
+        }
+
+        static string ResolvePath(string lsPath, 
+            string dir = null)
+        {
+            if (string.IsNullOrEmpty(lsPath)) return null;
+            // Absolutní cesta
+            if (Path.IsPathRooted(lsPath) && File.Exists(lsPath))
+                return lsPath;
+            // Relativní cesta - vázaná na adresář výkresu
+            if (string.IsNullOrEmpty(dir)) return null;
+            string rlPath = Path.GetFullPath(Path.Combine(dir, lsPath));
+            if (File.Exists(rlPath))
+                return rlPath;
+            return null;
         }
     }
 }

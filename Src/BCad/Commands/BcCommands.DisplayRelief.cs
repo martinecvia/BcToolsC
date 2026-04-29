@@ -39,7 +39,8 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             // Zoom do výkresu, zobrazující reliéf
-            Extents3d extents = polyline.GeometricExtents;
+            // Nahradit za BcApp.Envelope?
+            Extents3d extents = polyline.GeometricExtents; 
             if (TryZoomToExtents(editor, extents))
                 editor.Ok("Ok; Vykreslen reliéf ČR");
         }

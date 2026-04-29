@@ -11,12 +11,12 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Kn.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Mc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Cuzk.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Profile.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.DisplayRelief.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Maps.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Raster.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Uc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Krovak.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Geometry.cs" />
