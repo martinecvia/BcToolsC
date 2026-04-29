@@ -12,11 +12,13 @@
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Cadaster.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Geometry.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Profile.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.DisplayRelief.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Maps.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Raster.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Krovak.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)commands\models\Ge_AlignTextToCurve.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Geometry.cs" />
@@ -26,6 +28,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Text.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="$(MSBuildThisFileDirectory)Commands\Models\" />
     <Folder Include="$(MSBuildThisFileDirectory)Transactions\" />
   </ItemGroup>
 </Project>

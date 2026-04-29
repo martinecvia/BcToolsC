@@ -22,9 +22,9 @@ namespace BcToolsC.BCad.Transactions
 
         public static BCadTransaction Current => _current;
 
-        public AcDb.Database Database { get; private set; }
-        public AcApp.Document Document { get; private set; }
-        public Transaction Transaction { get; private set; }
+        public AcDb.Database Database { get; set; }
+        public AcApp.Document Document { get; set; }
+        public Transaction Transaction { get; set; }
 
         public BlockTable BlockTable { get; private set; }
         public BlockTableRecord ModelSpace { get; private set; }
