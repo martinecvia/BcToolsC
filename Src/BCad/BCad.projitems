@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)BcApp.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BcAppRibbonCommandH.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Cadaster.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\BcCommands.Geometry.cs" />

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<RibbonTab xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		   IsVisible="True" KeyTip="BC"
+		   Name="BcToolsC" Title="BcToolsC" IsEnabled="True" IsPanelEnabled="True" AllowTearOffContextualPanels="False">
+	<RibbonPanel FloatingOrientation="Vertical" CanToggleOrientation="True" IsEnabled="True">
+		<RibbonPanelSource Title="Práce s mapou">
+			<RibbonSplitButton ShowText="True" Size="Large" ShowImage="True" SynchronizeOption="Both">
+				<RibbonButton Text="S-JTSK" ShowText="True" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_UC_UCS" />
+				<RibbonButton Text="World" ShowText="True" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_UC_WCS" />
+			</RibbonSplitButton>
+			<RibbonRowPanel>
+				<RibbonButton Text="Google StreetView" ShowText="True" Size="Small" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_MP_GM_STREET" />
+				<RibbonRowBreak />
+				<RibbonButton Text="Google" ShowText="True" Size="Small" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_MP_GM" />
+				<RibbonRowBreak />
+				<RibbonButton Text="Mapy.com" ShowText="True" Size="Small" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_MP_MC" />
+			</RibbonRowPanel>
+		</RibbonPanelSource>
+	</RibbonPanel>
+	<RibbonPanel FloatingOrientation="Vertical" CanToggleOrientation="True" IsEnabled="True">
+		<RibbonPanelSource Title="Stahovací služba Atom">
+			<RibbonButton Text="Rastr&#13;.tif" ShowText="True" Size="Large" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_TF_DW" />
+			<RibbonButton Text="Katastrální&#13;mapu" ShowText="True" Size="Large" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_TF_DW" />
+		</RibbonPanelSource>
+	</RibbonPanel>
+	<RibbonPanel FloatingOrientation="Vertical" CanToggleOrientation="True" IsEnabled="True">
+		<RibbonPanelSource Title="Pomůcky">
+
+		</RibbonPanelSource>
+	</RibbonPanel>
+</RibbonTab>

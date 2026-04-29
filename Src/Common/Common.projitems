@@ -25,7 +25,22 @@
     <Compile Include="$(MSBuildThisFileDirectory)properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="$(MSBuildThisFileDirectory)Resources\" />
     <Folder Include="$(MSBuildThisFileDirectory)Properties\" />
+    <Folder Include="$(MSBuildThisFileDirectory)Resources\Xml\Ribbons\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)resources\xml\ribbons\rp_Default.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_img_default_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_img_default_32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_KN_PARCEL_EXPORT.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_KN_PARCEL_INFO.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_KN_SJTSK.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_TIF_SJTSK.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CZ_RELIEF.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_UCS_SJTSK.png" />
   </ItemGroup>
 </Project>

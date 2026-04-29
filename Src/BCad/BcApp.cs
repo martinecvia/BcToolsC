@@ -1,6 +1,8 @@
-#pragma warning disable
+Ôªø#pragma warning disable
 #define NON_VOLATILE_MEMORY
 using System; // Keep for .NET 4.6
+using System.Linq; // Keep for .NET 4.6
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Globalization;
@@ -20,6 +22,7 @@ using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Geometry;
 
 using ZwSoft.ZwCAD.Windows;
+using ZwSoft.Windows;
 #else
 using AcadApplication = Autodesk.AutoCAD.Interop.AcadApplication;
 using AcadDocument = Autodesk.AutoCAD.Interop.AcadDocument;
@@ -33,6 +36,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 
 using Autodesk.AutoCAD.Windows;
+using Autodesk.Windows;
 #endif
 #endregion
 
@@ -42,10 +46,14 @@ using BcToolsC.Helpers;
 using NetTopologySuite;
 using BcToolsC.BCad.Inspector;
 
+// RibbonXml
+using AcRb = RibbonXml;
+using RibbonXml;
+
 [assembly: CommandClass(typeof(BcToolsC.BCad.BcApp))]
 namespace BcToolsC.BCad
 {
-    // SpouötÏnÌ aplikace z registru:
+    // Spou≈°tƒõn√≠ aplikace z registru:
     // https://keanw.com/2015/01/using-environment-variables-inside-autocad-file-path-options.html
     public class BcApp : IExtensionApplication
     {
@@ -53,7 +61,7 @@ namespace BcToolsC.BCad
         public static AcadApplication ThisApplication => (AcadApplication)Application.AcadApplication;
         public static AcadDocument ThisDrawing => (AcadDocument)DocumentExtension.GetAcadDocument(Document);
         public static AcadUCS ThisUCS => (AcadUCS)ThisDrawing.ActiveUCS;
-        // Platforma, pro kterou m·me spuötÏnou instanci
+        // Platforma, pro kterou m√°me spu≈°tƒõnou instanci
         public static bool IsAcad { get; private set; }
         public static Document Document => AcApp.Core.Application.DocumentManager.MdiActiveDocument;
         public static RXClass Entity = RXObject.GetClass(typeof(AcDb.Entity));
@@ -64,9 +72,9 @@ namespace BcToolsC.BCad
 #pragma warning restore CS8603 // Possible null reference return.
         public static bool IsAppProperlyInitialized { get; private set; }
         public static AcDb.Extents2d Envelope { get; private set; }
-
+        public static AcRb.RibbonXml Ribbons { get; private set; }
         static BcAppInspector defaultInspector; // Default
-        static BcAppInspector generalInspector; // Pro objekty jako takovÈ
+        static BcAppInspector generalInspector; // Pro objekty jako takov√©
 
         public void Initialize()
         {
@@ -74,7 +82,7 @@ namespace BcToolsC.BCad
                 ?? throw new InvalidOperationException("not loaded yet!");
             Editor editor = document.Editor;
 #if DEBUG
-            // ZobrazenÌ pro v˝voj·¯e, nemÏlo by se objevit v produkci
+            // Zobrazen√≠ pro v√Ωvoj√°≈ôe, nemƒõlo by se objevit v produkci
             var pc = Environment.MachineName;
             if (string.Compare(pc, "MARTINCOPLKFB20", true) == 0 || string.Compare(pc, "PC-COPLAK2026",   true) == 0)
                 AllocConsole();
@@ -82,10 +90,20 @@ namespace BcToolsC.BCad
             try
             {
                 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
+                AcRb.Builder hBuilder = new AcRb.Builder()
+                    .SetDefaultHandler(typeof(BcAppRibbonCommandH));
+                Assembly assembly = Assembly.GetExecutingAssembly();
+                foreach (string resource in assembly.GetManifestResourceNames())
+                    hBuilder.RegisterImage(resource.Split('.').Reverse().Skip(1).First(), resource);
+                Ribbons = hBuilder.Build();
+                if (ComponentManager.Ribbon == null)
+                    ComponentManager.PropertyChanged += ComponentManager_PropertyChanged;
+                else
+                    RegisterRibbon();
 #if !NET8_0_OR_GREATER
-                // StaröÌ verze naËÌtajÌ tuhle knihovnu u nÏkter˝ch funkciÌ, a je viditeln˝ "z·sek", proto to loadÌme co nejd¯Ìve
+                // Star≈°√≠ verze naƒç√≠taj√≠ tuhle knihovnu u nƒõkter√Ωch funkci√≠, a je viditeln√Ω "z√°sek", proto to load√≠me co nejd≈ô√≠ve
                 try { System.Reflection.Assembly.Load("Accessibility, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"); }
-                catch (System.Exception exception) { editor.Warn($"Chyba naËtenÌ knihovny 'Accessibility'; V˝jimka: {exception}"); }
+                catch (System.Exception exception) { editor.Warn($"Chyba naƒçten√≠ knihovny 'Accessibility'; V√Ωjimka: {exception}"); }
 #endif
                 try
                 {
@@ -95,24 +113,24 @@ namespace BcToolsC.BCad
                     CultureInfo.DefaultThreadCurrentCulture = culture;
                     CultureInfo.DefaultThreadCurrentUICulture = culture;
                 }
-                catch (CultureNotFoundException exception) { editor.Error($"Chyba naËtenÌ ËeskÈho prost¯edÌ; V˝jimka: {exception}"); }
-                // ZÌsk·nÌ informace o aktu·lnÌm procesu
+                catch (CultureNotFoundException exception) { editor.Error($"Chyba naƒçten√≠ ƒçesk√©ho prost≈ôed√≠; V√Ωjimka: {exception}"); }
+                // Z√≠sk√°n√≠ informace o aktu√°ln√≠m procesu
                 if (Process.GetCurrentProcess().ProcessName.Contains("acad"))
                 {
                     try
                     {
-                        foreach (System.Reflection.Assembly assembly 
+                        foreach (System.Reflection.Assembly a 
                             in AppDomain.CurrentDomain.GetAssemblies())
                         {
-                            var fullName = assembly.FullName;
-                            // ZjistÌme jestli naöe aplikace m· naËtenou knihovnu "acdbmgd"
+                            var fullName = a.FullName;
+                            // Zjist√≠me jestli na≈°e aplikace m√° naƒçtenou knihovnu "acdbmgd"
                             if (fullName != null && fullName.StartsWith("acdbmgd", StringComparison.OrdinalIgnoreCase))
                                 IsAcad = true;
                         }
                     } 
                     catch (System.Exception exception)
                     {
-                        editor.Error($"ZÌsk·nÌ informace o platformÏ selhalo; V˝jimka: {exception}\n");
+                        editor.Error($"Z√≠sk√°n√≠ informace o platformƒõ selhalo; V√Ωjimka: {exception}\n");
                     }
                 }
                 var vertexes = CompressHelper.DeserializeFromBase64(ReliefRepository.COMPILE_RELIEF_DOUBLE_ARRAY_CZ);
@@ -135,21 +153,21 @@ namespace BcToolsC.BCad
                 generalInspector = new BcAppInspector("Informace");
                 AcApp.Application.AddDefaultContextMenuExtension(defaultInspector); AcApp.Application.AddObjectContextMenuExtension(Entity, generalInspector);
                 editor.WriteMessage("\n==========================================" +
-                "\n   N·vrh a realizace podp˘rn˝ch n·stroj˘ pro projektanty" +
-                "\n   (c) 2026 Martin Copl·k  |  VUT Brno" +
-                "\n   Contact: Martin Copl·k <martin.coplak@gmail.com>" +
-                "\n   Consult: Ing. Michal KosÚovsk˝, Ph.D. <michal.kosnovsky@vut.cz>" +
+                "\n   N√°vrh a realizace podp≈Ørn√Ωch n√°stroj≈Ø pro projektanty" +
+                "\n   (c) 2026 Martin Copl√°k  |  VUT Brno" +
+                "\n   Contact: Martin Copl√°k <martin.coplak@gmail.com>" +
+                "\n   Consult: Ing. Michal Kos≈àovsk√Ω, Ph.D. <michal.kosnovsky@vut.cz>" +
                 "\n   Oponent: Ing. Jacek Wendrinski, Ph.D. <jacek.wendrinski@viapont.cz>" +
                 "\n------------------------------------------" +
                 "\n   BcToolsC.NET Version: " + Version +
                 "\n==========================================\n");
-                // Zde probÌh· inicializace instance
-                editor.Ok($"Inicializace dokonËena.\n");
+                // Zde prob√≠h√° inicializace instance
+                editor.Ok($"Inicializace dokonƒçena.\n");
                 IsAppProperlyInitialized = true;
             }
             catch (System.Exception exception)
             {
-                editor.Error($"Inicializace selhala; V˝jimka: {exception.Message}\n");
+                editor.Error($"Inicializace selhala; V√Ωjimka: {exception.Message}\n");
             }
         }
 
@@ -160,7 +178,23 @@ namespace BcToolsC.BCad
                 AcApp.Application.RemoveObjectContextMenuExtension(Entity, generalInspector);
         }
 
-        // syscall pro otev¯eni konzole
+        private void RegisterRibbon()
+        {
+            // https://keanw.com/wp-content/uploads/tp/WindowsLiveWriter/Ribbon%20layout.png
+            Ribbons.CreateTab("rp_Default");
+        }
+
+        private void ComponentManager_PropertyChanged(object _, 
+            System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "Ribbon")
+            {
+                RegisterRibbon();
+                ComponentManager.PropertyChanged -= ComponentManager_PropertyChanged;
+            }
+        }
+
+        // syscall pro otev≈ôeni konzole
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool AllocConsole();
     }
