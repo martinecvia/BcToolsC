@@ -1,0 +1,3 @@
+[submodule "RibbonXml"]
+	path = RibbonXml
+	url = https://github.com/martinecvia/RibbonXml
