@@ -1,13 +1,10 @@
 name: MSBuild
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ "master" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "master" ]
 
 permissions:
   contents: write
@@ -40,7 +37,11 @@ jobs:
     # Build .NET 4.7 project (ZWCAD)
     - name: Build .NET 4.7 (ZCAD.25)
       run: msbuild BuildsTargets/BcToolsZC25/BcToolsZC25.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
+    - name: Build .NET 4.7 (ZCAD.26)
+      run: msbuild BuildsTargets/BcToolsZC26/BcToolsZC26.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
 
     # Build .NET 8.0 project
     - name: Build .NET 8.0 (ACAD.25)
       run: dotnet build BuildsTargets/BcToolsAC25/BcToolsAC25.csproj -c Release /p:AllowUnsafeBlocks=true
+    - name: Build .NET 8.0 (ACAD.26)
+      run: dotnet build BuildsTargets/BcToolsAC26/BcToolsAC26.csproj -c Release /p:AllowUnsafeBlocks=true
