@@ -61,6 +61,80 @@ namespace BcToolsC.BCad.Commands
             public string Town { get; set; }
         }
 
+        [AcRun.CommandMethod("BCTOOLSC_KN_VR")]
+        public void Kn_DownloadAndAttachVrstevnice()
+        {
+            if (!BcApp.IsAppProperlyInitialized) return;
+            AcApp.Document document = BcApp.Document;
+            Database db = document.Database;
+            Editor editor = document.Editor;
+
+            if (!ValidateModelSpace(editor, db)) return;
+            if (!ValidateDrawingPath(editor, out string dir)) return;
+            if (!ValidateDirectoryWritable(editor, dir)) return;
+
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            var wgs84 = GetWGS84FromPoint(point);
+
+            // Stažení dat ze serveru ČÚZK
+            AtomicEntries response = null;
+            try
+            {
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+                    "ZABAGED-vyskopis-DGN", wgs84.L, wgs84.B);
+                Console.WriteLine(url);
+                editor.Info("Kontaktuji ... https://atom.cuzk.cz");
+                string json = DownloadString(url);
+                if (string.IsNullOrWhiteSpace(json))
+                    throw new Exception("Prázdná odpověď serveru.");
+                response = Deserialize<AtomicEntries>(json);
+            }
+            catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); return; }
+            if (response?.Entries == null || response.Entries.Count == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+
+            // Výběr konkrétního mapového listu
+            if (!TrySelectEntry(editor, response, "mapový list: ", out AtomicEntries.Entry entry))
+                return;
+
+            // Stažení dat
+            byte[] data = DownloadDataWithProgress(entry.Link);
+            if (data == null || data.Length == 0)
+            {
+                editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                return;
+            }
+
+            // Rozbalení a vložení do výkresu
+            if (!TryUnzipData(data, dir, out string anyFile))
+            {
+                editor.Error("Chyba; Nepovedlo se uložit soubor.");
+                return;
+            }
+
+            // Změna cest, soubory můžou mít jiné jméno souborů než je název archivu
+            string dgnFile = Path.ChangeExtension(anyFile, ".dgn");
+            document.SendStringToExecute("_.-DGNATTACH\n" +
+                         $"\"{dgnFile}\"\n" +
+                          "\n" +
+                          "_Master\n" +
+                          "*0,0,0\n" +
+                          // ^ * stanovuje WCS souřadnice
+                          "1\n" +
+                          "0\n", true, false, false);
+        }
+
         [AcRun.CommandMethod("BCTOOLSC_KN_AN")]
         public void Kn_ExportParcels()
         {

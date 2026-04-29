@@ -36,11 +36,29 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_img_default_32.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_KN_PARCEL_EXPORT.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_KN_PARCEL_INFO.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_KN_SJTSK.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CUZK_TIF_SJTSK.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_CZ_RELIEF.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\BAK_UCS_SJTSK.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_vut_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_dt4_32.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_profile_16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_relief_cz_32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_mapy_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_google_16.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_streetview_16.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_cuzk_32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_contours_32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_land_32.ico" />
   </ItemGroup>
 </Project>
