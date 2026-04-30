@@ -19,7 +19,6 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    
     - name: Install .NET Framework 4.7 Developer Pack
       run: |
         choco install netfx-4.7-devpack -y --no-progress

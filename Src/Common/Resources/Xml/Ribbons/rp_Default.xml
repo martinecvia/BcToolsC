@@ -39,12 +39,12 @@
 				<RibbonButton Text="Profil křivky (SOLID)" ShowText="False" ShowImage="True" Size="Small" Image="rp_profile_16" CommandHandler="BCTOOLSC_MC_PROFILE_SOLID" />
 				<RibbonRowBreak />
 			</RibbonRowPanel>
-			<RibbonButton Text="Profil křivky&#13;s 3dFace" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_img_default_32" Orientation="Vertical" CommandHandler="BCTOOLSC_MC_PROFILE_3DFACE" />
+			<RibbonButton Text="Profil křivky&#13;s 3dFace" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_3dface_32" Orientation="Vertical" CommandHandler="BCTOOLSC_MC_PROFILE_3DFACE" />
 			<RibbonButton Text="Profil křivky&#13;s DT4" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_dt4_32" Orientation="Vertical" CommandHandler="BCTOOLSC_MC_PROFILE_DT4" />
 			<RibbonSplitButton Text="Stahovací&#13;služby" ShowText="True" ShowImage="True" Size="Large" Orientation="Vertical" SynchronizeOption="Image">
 				<RibbonButton Text="Vrstevnice (.dgn)" ShowText="True" Size="Large" LargeImage="rp_contours_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_VR" />
 				<RibbonButton Text="Stažení katastru" ShowText="True" Size="Large" LargeImage="rp_img_default_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_DW" />
-				<RibbonButton Text="Vložení katastru" ShowText="True" Size="Large" LargeImage="rp_land_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_AT" />
+				<RibbonButton Text="Katastr (.dxf)" ShowText="True" Size="Large" LargeImage="rp_land_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_AT" />
 				<RibbonButton Text="Rastr (.tif)" ShowText="True" Size="Large" LargeImage="rp_img_default_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_TF_DW" />
 			</RibbonSplitButton>
 			<RibbonRowPanel>

@@ -142,11 +142,11 @@ namespace BcToolsC.BCad.Commands
             AcApp.Document document = BcApp.Document;
             Database db = document.Database;
             Editor editor = document.Editor;
-            if (!db.TileMode)
-            {
-                editor.Warn("Povoleno pouze v modelovém prostoru.");
-                return;
-            }
+
+            if (!ValidateModelSpace(editor, db)) return;
+            if (!ValidateDrawingPath(editor, out string dir)) return;
+            if (!ValidateDirectoryWritable(editor, dir)) return;
+
             var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
             typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
             if (__curve == ObjectId.Null)
@@ -168,21 +168,23 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             var cdata = __cdata.Value;
-            int o = cdata.Vertices.Count;
-            if (o < 2)
+            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
+            if (cdata.Vertices.Count < 2)
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
-            Coordinate[] coord = new Coordinate[o];
-            for (int i = 0; i < o; i++)
+
+            // Vytvoření řezací křivky
+            Coordinate[] coord = new Coordinate[cdata.Vertices.Count];
+            for (int i = 0; i < cdata.Vertices.Count; i++)
             {
                 var v = cdata.Vertices[i];
                 // Ignorujeme Z souřadnici křivky, protože ji nemáme jak porovnat
                 coord[i] = new Coordinate(v.X, v.Y);
             }
-            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
-            if (!coord[0].Equals2D(coord[o - 1]))
+            
+            if (!coord[0].Equals2D(coord[cdata.Vertices.Count - 1]))
             {
                 editor.Warn("Nebyla nalezena uzavřená křivka pro tuto operaci.");
                 return;
@@ -278,7 +280,7 @@ namespace BcToolsC.BCad.Commands
                     {
                         if (!GetIntersectionArea(p.Geometry, polyline, out Geometry intersection, out double area)) continue;
                         if (intersection != null && intersection.Coordinates.Length > 2)
-                            Call(t => t.AddLWPolyline(intersection.Coordinates.Select(c => new Point2d(c.X, c.Y)), color: 1));
+                            Call(t => t.AddLWPolyline(p.Geometry.Coordinates.Select(c => new Point2d(c.X, c.Y)), color: 1));
                         else
                             Call(t => t.AddLWPolyline(p.Geometry.Coordinates.Select(c => new Point2d(c.X, c.Y)), color: 5));
                     }
