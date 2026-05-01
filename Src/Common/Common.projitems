@@ -77,9 +77,9 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_land_download_32.ico" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_32.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_proxy_16.ico" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\rp_proxy_16.png" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_32.ico" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\0704-A-13-2.tif" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\5055539.png" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\autocad.ico" />
