@@ -29,78 +29,9 @@ namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands
     {
-        readonly AcRun.RXClass _proxyEntity = AcRun.RXObject.GetClass(typeof(ProxyEntity));
-        readonly AcRun.RXClass _proxyObject = AcRun.RXObject.GetClass(typeof(ProxyObject));
-
-        [AcRun.CommandMethod("BCTOOLSC_MC_RM_PROXY")]
-        public void Mc_ClearProxy()
-        {
-            if (!BcApp.IsAppProperlyInitialized) return;
-            AcApp.Document document = BcApp.Document;
-            if (document == null) return;
-            Database db = document.Database;
-            Editor editor = document.Editor;
-            if (!db.TileMode)
-            {
-                editor.Warn("Povoleno pouze v modelovém prostoru.");
-                return;
-            }
-            long n = db.Handseed.Value / 100L;
-            if (n == 0) n = 1;
-            using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
-            {
-                progress.SetLimit(100);
-                progress.Start("Procházím ...");
-                // https://forums.autodesk.com/t5/net-forum/proxyobjects-amp-proxyentities-how-to-find-all/td-p/10867012
-                var i = 0;
-                Call(t =>
-                {
-                    try
-                    {
-                        var h = db.BlockTableId.Handle;
-                        var l = h.Value;
-                        while (true)
-                        {
-                            long p = l;
-                            h = db.Handseed;
-                            long c = h.Value;
-                            if (p >= c) break;
-                            if (l % n == 0L) progress.MeterProgress();
-                            if (db.TryGetObjectId(new Handle(l), out ObjectId id) && !id.IsErased)
-                            {
-                                if (id.ObjectClass.IsDerivedFrom(_proxyEntity))
-                                {
-                                    // ProxyEntity
-                                    if (t.TryGet(id, out ProxyEntity e, OpenMode.ForWrite) && !e.IsErased && (e.ProxyFlags & 1) == 1)
-                                    {
-                                        e.Erase(true);
-                                        ++i;
-                                    }
-                                }
-                                else if (id.ObjectClass.IsDerivedFrom(_proxyObject))
-                                {
-                                    // ProxyObject
-                                    if (t.TryGet(id, out ProxyObject o, OpenMode.ForWrite) && !o.IsErased && (o.ProxyFlags & 1) == 1)
-                                    {
-                                        o.Erase(true);
-                                        ++i;
-                                    }
-                                }
-                            }
-                            ++l;
-                        }
-                    }
-                    catch (Exception)
-                    { }
-                });
-                progress.Stop();
-                editor.Ok("Ok; Smazaných proxy objektů: " + i);
-            }
-        }
-
-        [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE_SOLID")]
+        [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_SOLID")]
         public void Mc_ProfileWithSolid() => BuildProfiler(true);
-        [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE")]
+        [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE")]
         public void Mc_ProfileEmpty() => BuildProfiler();
 
         int previousScaleY = 1_000;
@@ -296,7 +227,7 @@ namespace BcToolsC.BCad.Commands
             public int GetHashCode(Point3d p) => (Q(p.X).GetHashCode() * 397) ^ Q(p.Y).GetHashCode();
         }
 
-        [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE_3DFACE")]
+        [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_3DFACE")]
         public void Mc_Profile3dFace()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
@@ -467,7 +398,7 @@ namespace BcToolsC.BCad.Commands
             return;
         }
 
-        [AcRun.CommandMethod("BCTOOLSC_MC_PROFILE_DT4")]
+        [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_DT4")]
         public void Mc_ProfileDt4()
         {
             if (!BcApp.IsAppProperlyInitialized) return;

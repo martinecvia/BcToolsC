@@ -31,13 +31,11 @@ namespace BcToolsC.BCad.Commands
             Editor editor = document.Editor;
 
             if (!ValidateModelSpace(editor, db)) return;
-            if ((string)BcApp.ThisDrawing.GetVariable("UCSNAME") == "S-JTSK") return;
             BcApp.ThisDrawing.ActiveUCS = BcApp.ThisDrawing.UserCoordinateSystems.Add(
                 new[] { .0, .0, .0 },
                 new[] { -1.0, .0, .0 },
                 new[] { .0, -1.0, .0 },
                 "S-JTSK");
-            editor.Ok("Ok; Nastaven ucs na: SJTSK.");
         }
 
         [AcRun.CommandMethod("BCTOOLSC_UC_WCS")]
@@ -51,7 +49,6 @@ namespace BcToolsC.BCad.Commands
 
             if (!ValidateModelSpace(editor, db)) return;
             editor.CurrentUserCoordinateSystem = Matrix3d.Identity;
-            editor.Ok("Ok; Nastaven ucs na: WORLD.");
         }
     }
 }

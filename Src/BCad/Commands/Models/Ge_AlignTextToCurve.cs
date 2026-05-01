@@ -40,7 +40,7 @@ namespace BcToolsC.BCad.Commands.Models
             JigPromptPointOptions options = new JigPromptPointOptions("\nUmístěte text na křivku [Offset(O)/Rotace(R)/Čitelnost(Y)]: ")
             {
                 UserInputControls = UserInputControls.Accept3dCoordinates |
-                                     UserInputControls.NoNegativeResponseAccepted,
+                                    UserInputControls.NoNegativeResponseAccepted,
             };
             options.Keywords.Add("O");
             options.Keywords.Add("R");

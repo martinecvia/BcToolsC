@@ -10,20 +10,10 @@
 	<!-- Panel s pomůckami -->
 	<RibbonPanel FloatingOrientation="Vertical" CanToggleOrientation="True" IsEnabled="True">
 		<RibbonPanelSource Title="Práce s mapou">
-			<RibbonSplitButton Text="XY" ShowText="True" ShowImage="True" Size="Large" Orientation="Vertical" SynchronizeOption="Image">
-				<RibbonButton Text="Křovákovo zobrazení" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_img_default_32" CommandHandler="BCTOOLSC_UC_UCS" />
-				<RibbonButton Text="Světové (World)" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_img_default_32" CommandHandler="BCTOOLSC_UC_WCS" />
-			</RibbonSplitButton>
-			<RibbonButton Text="Vlož&#13;Reliéf" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_relief_cz_32" Orientation="Vertical" CommandHandler="BCTOOLSC_RF_CZ" />
-			<!--
-			<RibbonSplitButton Text="Reliéf" ShowText="True" ShowImage="True" Size="Large" Orientation="Vertical" SynchronizeOption="Image">
-				<RibbonButton Text="Reliéf&#13;CZ" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_relief_cz_32" CommandHandler="BCTOOLSC_RF_CZ" />
-				<RibbonButton Text="Reliéf&#13;SK" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_relief_sk_32" CommandHandler="BCTOOLSC_RF_SK" 
-							  IsEnabled="False" />
-			</RibbonSplitButton>
-			-->
+			<RibbonButton Text="S-JTSK&#13;zobrazení" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_ucs_32"  Orientation="Vertical" CommandHandler="BCTOOLSC_UC_UCS" />
+			<RibbonButton Text="Vlož&#13;reliéf" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_relief_cz_32" Orientation="Vertical" CommandHandler="BCTOOLSC_RF_CZ" />
 			<RibbonRowPanel>
-				<RibbonButton Text="Google StreetView" ShowText="True" ShowImage="True" Size="Small" Image="rp_streetview_16" CommandHandler="BCTOOLSC_MP_GM_STREET" />
+				<RibbonButton Text="StreetView" ShowText="True" ShowImage="True" Size="Small" Image="rp_streetview_16" CommandHandler="BCTOOLSC_MP_GM_STREET" />
 				<RibbonRowBreak />
 				<RibbonButton Text="Google" ShowText="True" ShowImage="True" Size="Small" Image="rp_google_16" CommandHandler="BCTOOLSC_MP_GM" />
 				<RibbonRowBreak />
@@ -33,26 +23,27 @@
 	</RibbonPanel>
 	<RibbonPanel FloatingOrientation="Vertical" CanToggleOrientation="True" IsEnabled="True">
 		<RibbonPanelSource Title="Práce s externími daty">
-			<RibbonRowPanel>
-				<RibbonButton Text="Profil křivky" ShowText="False" ShowImage="True" Size="Small" Image="rp_profile_16" CommandHandler="BCTOOLSC_MC_PROFILE" />
-				<RibbonRowBreak />
-				<RibbonButton Text="Profil křivky (SOLID)" ShowText="False" ShowImage="True" Size="Small" Image="rp_profile_16" CommandHandler="BCTOOLSC_MC_PROFILE_SOLID" />
-				<RibbonRowBreak />
-			</RibbonRowPanel>
-			<RibbonButton Text="Profil křivky&#13;s 3dFace" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_3dface_32" Orientation="Vertical" CommandHandler="BCTOOLSC_MC_PROFILE_3DFACE" />
-			<RibbonButton Text="Profil křivky&#13;s DT4" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_dt4_32" Orientation="Vertical" CommandHandler="BCTOOLSC_MC_PROFILE_DT4" />
 			<RibbonSplitButton Text="Stahovací&#13;služby" ShowText="True" ShowImage="True" Size="Large" Orientation="Vertical" SynchronizeOption="Image">
 				<RibbonButton Text="Vrstevnice (.dgn)" ShowText="True" Size="Large" LargeImage="rp_contours_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_VR" />
-				<RibbonButton Text="Stažení katastru" ShowText="True" Size="Large" LargeImage="rp_img_default_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_DW" />
+				<RibbonButton Text="Stažení katastru" ShowText="True" Size="Large" LargeImage="rp_land_download_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_DW" />
 				<RibbonButton Text="Katastr (.dxf)" ShowText="True" Size="Large" LargeImage="rp_land_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_KN_AT" />
-				<RibbonButton Text="Rastr (.tif)" ShowText="True" Size="Large" LargeImage="rp_img_default_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_TF_DW" />
+				<RibbonButton Text="Rastr (.tif)" ShowText="True" Size="Large" LargeImage="rp_raster_32" Orientation="Horizontal" ShowImage="True" CommandHandler="BCTOOLSC_TF_DW" />
 			</RibbonSplitButton>
+			<RibbonButton Text="Profil křivky&#13;s 3dFace" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_3dface_32" Orientation="Vertical" CommandHandler="BCTOOLSC_PR_PROFILE_3DFACE" />
+			<RibbonButton Text="Profil křivky&#13;s DT4" ShowText="True" ShowImage="True" Size="Large" LargeImage="rp_dt4_32" Orientation="Vertical" CommandHandler="BCTOOLSC_PR_PROFILE_DT4" />
 			<RibbonRowPanel>
-				<RibbonButton Text="Zasazení rastru" ShowText="True" ShowImage="True" Size="Small" Image="rp_img_default_16" CommandHandler="BCTOOLSC_TF_ST" />
+				<RibbonButton Text="Profil křivky" ShowText="False" ShowImage="True" Size="Small" Image="rp_profile_16" CommandHandler="BCTOOLSC_PR_PROFILE" />
 				<RibbonRowBreak />
-				<RibbonButton Text="Export pozemků" ShowText="True" ShowImage="True" Size="Small" Image="rp_img_default_16" CommandHandler="BCTOOLSC_KN_AN" />
+				<RibbonButton Text="Profil křivky (SOLID)" ShowText="False" ShowImage="True" Size="Small" Image="rp_profile_16" CommandHandler="BCTOOLSC_PR_PROFILE_SOLID" />
 				<RibbonRowBreak />
-				<RibbonButton Text="Smaž proxy" ShowText="True" ShowImage="True" Size="Small" Image="rp_img_default_16" CommandHandler="BCTOOLSC_MC_RM_PROXY" />
+				<RibbonButton Text="Profil křivky (Vrstevnice)" ShowText="False" ShowImage="True" Size="Small" Image="rp_profile_16" CommandHandler="BCTOOLSC_PR_PROFILE_CONTOUR" IsEnabled="False" />
+			</RibbonRowPanel>
+			<RibbonRowPanel>
+				<RibbonButton Text="Zasazení rastru" ShowText="True" ShowImage="True" Size="Small" Image="rp_raster_seat_16" CommandHandler="BCTOOLSC_TF_ST" />
+				<RibbonRowBreak />
+				<RibbonButton Text="Export pozemků" ShowText="True" ShowImage="True" Size="Small" Image="rp_excel_16" CommandHandler="BCTOOLSC_KN_AN" />
+				<RibbonRowBreak />
+				<RibbonButton Text="Smaž proxy" ShowText="True" ShowImage="True" Size="Small" Image="rp_proxy_16" CommandHandler="BCTOOLSC_MC_RM_PROXY" />
 			</RibbonRowPanel>
 		</RibbonPanelSource>
 	</RibbonPanel>

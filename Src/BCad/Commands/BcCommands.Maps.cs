@@ -53,7 +53,6 @@ namespace BcToolsC.BCad.Commands
                 string url = string.Format(endpoint,
                     wgs84.B, wgs84.L);
                 Console.WriteLine(url);
-                editor.Info("Kontaktuji ... " + provider);
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = provider + url,

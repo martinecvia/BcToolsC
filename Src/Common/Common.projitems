@@ -64,4 +64,34 @@
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_3dface_32.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_excel_16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_seat_16.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_ucs_32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_land_download_32.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_proxy_16.ico" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\rp_proxy_16.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_32.ico" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\0704-A-13-2.tif" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\5055539.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\autocad.ico" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\czechia-map-map-of-czech-republic-in-administrative-regions-in-blue-color-vector.jpg" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\Gemini_Generated_Image_5uiw5b5uiw5b5uiw-Picsart-BackgroundRemover.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\Gemini_Generated_Image_ln9426ln9426ln94.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\Mapy.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\south-africa.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\streetview.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\vut_500.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\google.webp" />
+  </ItemGroup>
 </Project>

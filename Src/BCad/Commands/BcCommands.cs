@@ -244,12 +244,18 @@ namespace BcToolsC.BCad.Commands
                 using (var ms = new MemoryStream(data))
                 using (var archive = new ZipArchive(ms, ZipArchiveMode.Read))
                 {
+                    bool? overwriteAll = null;
                     foreach (var zipEntry in archive.Entries)
                     {
+                        if (string.IsNullOrEmpty(zipEntry.Name)) continue; // Directory
                         var zipPath = Path.Combine(dir, zipEntry.Name);
                         if (File.Exists(zipPath))
                         {
-                            if (!GetFileOverrideAnswerFromPrompt()) return false;
+                            if (overwriteAll == null)
+                            {
+                                overwriteAll = GetFileOverrideAnswerFromPrompt();
+                                if (overwriteAll == false) return false;
+                            }
                             if (IsLocked(zipPath))
                             {
                                 MessageBox.Show(
@@ -371,6 +377,37 @@ namespace BcToolsC.BCad.Commands
             else
                 epsg = SJTSK_WGS84(x, y);
             return epsg;
+        }
+
+        static bool TrySelectEntry(Editor editor, AtomicEntries atom,
+            Regex regex, 
+            out AtomicEntries.Entry entry)
+        {
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+            entry = null;
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
+            if (atom.Entries.Count == 1)
+            {
+                entry = atom.Entries[0];
+                return true;
+            }
+            List<string> names = new List<string>();
+            foreach (var e in atom.Entries)
+            {
+                var match = regex.Match(e.Name);
+                if (match.Success) names.Add(match.Groups[1].Value.Trim());
+            }
+            if (names.Count == 0) return false;
+            var selected = GetKeywordFromPrompt(editor, "Vyberte mapový list", names.ToArray());
+            if (string.IsNullOrEmpty(selected))
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return false;
+            }
+#pragma warning disable CS8601 // Possible null reference assignment.
+            entry = atom.Entries.FirstOrDefault(e => e.Name.Contains(selected));
+#pragma warning restore CS8601 // Possible null reference assignment.
+            return entry != null;
         }
 
         static bool TrySelectEntry(Editor editor, AtomicEntries atom,

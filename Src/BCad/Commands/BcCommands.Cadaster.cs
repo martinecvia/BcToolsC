@@ -4,7 +4,6 @@ using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
 using System.Text.RegularExpressions;
-using System.Windows;
 using System.IO.Compression;
 using System.Xml;
 using System.Globalization;
@@ -90,7 +89,6 @@ namespace BcToolsC.BCad.Commands
                 string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
                     "ZABAGED-vyskopis-DGN", wgs84.L, wgs84.B);
                 Console.WriteLine(url);
-                editor.Info("Kontaktuji ... https://atom.cuzk.cz");
                 string json = DownloadString(url);
                 if (string.IsNullOrWhiteSpace(json))
                     throw new Exception("Prázdná odpověď serveru.");
@@ -144,9 +142,16 @@ namespace BcToolsC.BCad.Commands
             Editor editor = document.Editor;
 
             if (!ValidateModelSpace(editor, db)) return;
-            if (!ValidateDrawingPath(editor, out string dir)) return;
-            if (!ValidateDirectoryWritable(editor, dir)) return;
 
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            var wgs84 = GetWGS84FromPoint(point);
             var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
             typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
             if (__curve == ObjectId.Null)
@@ -154,106 +159,69 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
-            var __point = GetPointFromPrompt(editor, "Vyberte bod v katastrálním území");
-            if (__point == null)
-            {
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
-            }
-            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            
             var __cdata = GetCurve(__curve);
             if (__cdata == null)
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
-            var cdata = __cdata.Value;
-            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
-            if (cdata.Vertices.Count < 2)
+            var curve = __cdata.Value;
+            if (curve.Vertices.Count < 2)
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
 
             // Vytvoření řezací křivky
-            Coordinate[] coord = new Coordinate[cdata.Vertices.Count];
-            for (int i = 0; i < cdata.Vertices.Count; i++)
+            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
+            Coordinate[] vertices = new Coordinate[curve.Vertices.Count];
+            for (int i = 0; i < curve.Vertices.Count; i++)
             {
-                var v = cdata.Vertices[i];
+                var v = curve.Vertices[i];
                 // Ignorujeme Z souřadnici křivky, protože ji nemáme jak porovnat
-                coord[i] = new Coordinate(v.X, v.Y);
+                vertices[i] = new Coordinate(v.X, v.Y);
             }
-            
-            if (!coord[0].Equals2D(coord[cdata.Vertices.Count - 1]))
+            if (!vertices[0].Equals2D(vertices[curve.Vertices.Count - 1]))
             {
                 editor.Warn("Nebyla nalezena uzavřená křivka pro tuto operaci.");
                 return;
             }
-            var polyline = factory.CreatePolygon(coord);
-            var wgs84 = GetWGS84FromPoint(point);
+            // Stažení dat ze serveru ČÚZK
             AtomicEntries response = null;
             try
             {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme=CP&crs=JTSK&bbox={0},{1},{0},{1}",
-                    wgs84.L, wgs84.B);
-                editor.Info("Kontaktuji ... https://atom.cuzk.cz");
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+                    "CP", wgs84.L, wgs84.B);
+                Console.WriteLine(url);
                 string json = DownloadString(url);
                 if (string.IsNullOrWhiteSpace(json))
                     throw new Exception("Prázdná odpověď serveru.");
                 response = Deserialize<AtomicEntries>(json);
             }
             catch (Exception exception)
-            {
-                editor.Error(exception.Message);
-                return;
-            }
-            int n = response?.Entries?.Count ?? 0;
-            if (response?.Entries == null || n == 0)
+            { editor.Error("Chyba; " + exception.Message); return; }
+            if (response?.Entries == null || response.Entries.Count == 0)
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
-            // Výběr entry, pokud je entries víc jak jeden,
-            // uživatel je dotázán který konkrétní objekt chce
-            AtomicEntries.Entry entry;
-            if (n != 1)
-            {
-                List<string> keywords = new List<string>();
-                for (int i = 0; i < n; i++)
-                {
-                    AtomicEntries.Entry k = response.Entries[i];
-                    var match = _knRegex.Match(k.Name);
-                    if (match.Success)
-                        keywords.Add(match.Groups[1].Value.Trim());
-                }
-                if (keywords.Count == 0)
-                {
-                    editor.Warn("Nebyla nalazena žádná data.");
-                    return;
-                }
-                var __entry = GetKeywordFromPrompt(editor, "Vyberte mapový list", keywords.ToArray());
-                if (__entry == null) 
-                {
-                    editor.Warn("Výběr byl zrušen uživatelem.");
-                    return;
-                }
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-                entry = response.Entries.FirstOrDefault(e => e.Name.Contains(__entry));
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-            }
-            else entry = response.Entries[0];
-            if (entry == null)
-            {
-                editor.Warn("Nebyla nalazena žádná data.");
+
+            // Výběr konkrétního mapového listu
+            if (!TrySelectEntry(editor, response, _knRegex, out AtomicEntries.Entry entry))
                 return;
-            }
-            var data = DownloadDataWithProgress(entry.Link);
+
+            // Stažení dat
+            byte[] data = DownloadDataWithProgress(entry.Link);
             if (data == null || data.Length == 0)
             {
-                editor.Ok("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                 return;
             }
+
+            var polyline = factory.CreatePolygon(vertices);
             var parcels = Kn_CollectParcels(data, factory);
+            /*
             int q = parcels.Count;
             if (q == 0)
             {
@@ -289,6 +257,7 @@ namespace BcToolsC.BCad.Commands
                 }
                 progress.Stop();
             }
+            */
         }
 
         static List<AcParcel> Kn_CollectParcels(byte[] data, GeometryFactory factory)
@@ -396,34 +365,71 @@ namespace BcToolsC.BCad.Commands
             AcApp.Document document = BcApp.Document;
             Database db = document.Database;
             Editor editor = document.Editor;
-            if (!db.TileMode)
+
+            if (!ValidateModelSpace(editor, db)) return;
+            if (!ValidateDrawingPath(editor, out string dir)) return;
+            if (!ValidateDirectoryWritable(editor, dir)) return;
+
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
             {
-                editor.Warn("Povoleno pouze v modelovém prostoru.");
+                editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-            if (!Kn_TryDownloadData(editor, out string __saved, 
-                "DXF", "DGN"))
-                return;
-            if (string.IsNullOrEmpty(__saved)) return;
-            string ext = Path.GetExtension(__saved).Substring(1).ToUpper();
-            if (ext == "DXF") Call(t =>
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            var wgs84 = GetWGS84FromPoint(point);
+
+            // Stažení dat ze serveru ČÚZK
+            AtomicEntries response = null;
+            try
             {
-                string logFilename = Path.Combine(BcApp.CurrentDirectory, "BcToolsC_conversion_dxf.log");
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+                    "KM-KU-DXF", wgs84.L, wgs84.B);
+                Console.WriteLine(url);
+                string json = DownloadString(url);
+                if (string.IsNullOrWhiteSpace(json))
+                    throw new Exception("Prázdná odpověď serveru.");
+                response = Deserialize<AtomicEntries>(json);
+            }
+            catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); return; }
+            if (response?.Entries == null || response.Entries.Count == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+
+            // Výběr konkrétního mapového listu
+            if (!TrySelectEntry(editor, response, _knRegex, out AtomicEntries.Entry entry))
+                return;
+
+            // Stažení dat
+            byte[] data = DownloadDataWithProgress(entry.Link);
+            if (data == null || data.Length == 0)
+            {
+                editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                return;
+            }
+
+            // Rozbalení a vložení do výkresu
+            if (!TryUnzipData(data, dir, out string anyFile))
+            {
+                editor.Error("Chyba; Nepovedlo se uložit soubor.");
+                return;
+            }
+
+            // Změna cest, soubory můžou mít jiné jméno souborů než je název archivu
+            string dxfFile = Path.ChangeExtension(anyFile, ".dxf");
+            string logFile = Path.ChangeExtension(anyFile, ".log");
+            Call(t =>
+            {
                 using (var tb = new Database(false, true))
                 {
-                    tb.DxfIn(__saved, logFilename);
+                    tb.DxfIn(dxfFile, logFile);
                     db.Insert(Matrix3d.Identity, tb, false);
                 }
             });
-            else
-                document.SendStringToExecute("_.-DGNATTACH\n" +
-                         $"\"{__saved}\"\n" +
-                          "\n" +
-                          "_Master\n" +
-                          "*0,0,0\n" +
-                          // ^ * stanovuje WCS souřadnice
-                          "1\n" +
-                          "0\n", true, false, false);
         }
 
         [AcRun.CommandMethod("BCTOOLSC_KN_DW")]
@@ -433,146 +439,86 @@ namespace BcToolsC.BCad.Commands
             AcApp.Document document = BcApp.Document;
             Database db = document.Database;
             Editor editor = document.Editor;
-            if (!db.TileMode)
-            {
-                editor.Warn("Povoleno pouze v modelovém prostoru.");
-                return;
-            }
-            if (!Kn_TryDownloadData(editor, out string __saved, 
-                Kn_TypeThemeMap.Keys.ToArray()))
-                return;
-        }
+            if (!ValidateModelSpace(editor, db)) return;
+            if (!ValidateDrawingPath(editor, out string dir)) return;
+            if (!ValidateDirectoryWritable(editor, dir)) return;
 
-        private bool Kn_TryDownloadData(Editor editor, out string lsFile,
-            params string[] options)
-        {
-            lsFile = default;
+            // Získání vstupu od uživatele
             var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
             if (__point == null)
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
-                return false;
+                return;
             }
-            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return false;
-            var __theme = GetKeywordFromPrompt(editor, "Vyberte formát", options);
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            var wgs84 = GetWGS84FromPoint(point);
+
+            var __theme = GetKeywordFromPrompt(editor, "Vyberte formát", Kn_TypeThemeMap.Keys.ToArray());
             if (string.IsNullOrEmpty(__theme))
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
-                return false;
+                return;
             }
-            if (Kn_TypeThemeMap.TryGetValue(__theme, out string theme))
+            if (string.IsNullOrEmpty(__theme) || !Kn_TypeThemeMap.TryGetValue(__theme, out string theme))
             {
-                var wgs84 = GetWGS84FromPoint(point);
-                // Dotaz na ČÚZK
-                AtomicEntries response = null;
-                try
-                {
-                    string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                        theme, wgs84.L, wgs84.B);
-                    editor.Info("Kontaktuji ... https://atom.cuzk.cz");
-                    string json = DownloadString(url);
-                    if (string.IsNullOrWhiteSpace(json))
-                        throw new Exception("Prázdná odpověď serveru.");
-                    response = Deserialize<AtomicEntries>(json);
-                }
-                catch (Exception exception)
-                {
-                    editor.Error(exception.Message);
-                    return false;
-                }
-                int n = response?.Entries?.Count ?? 0;
-                if (response?.Entries == null || n == 0)
-                {
-                    editor.Warn("Nebyla nalazena žádná data.");
-                    return false;
-                }
-                // Výběr entry, pokud je entries víc jak jeden,
-                // uživatel je dotázán který konkrétní objekt chce
-                AtomicEntries.Entry entry;
-                if (n != 1)
-                {
-                    List<string> keywords = new List<string>();
-                    for (int i = 0; i < n; i++)
-                    {
-                        AtomicEntries.Entry k = response.Entries[i];
-                        var match = _knRegex.Match(k.Name);
-                        if (match.Success)
-                            keywords.Add(match.Groups[1].Value.Trim());
-                    }
-                    if (keywords.Count == 0)
-                    {
-                        editor.Warn("Nebyla nalazena žádná data.");
-                        return false;
-                    }
-                    var __entry = GetKeywordFromPrompt(editor, "Výběr území", keywords.ToArray());
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-                    entry = response.Entries.FirstOrDefault(e => e.Name.Contains(__entry));
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-                }
-                else entry = response.Entries[0];
-                if (entry == null)
-                {
-                    editor.Warn("Výběr byl zrušen uživatelem.");
-                    return false;
-                }
-                CommonOpenFileDialog dialog = new CommonOpenFileDialog
-                {
-                    Title = "Vyber místo pro uložení souborů",
-                    Multiselect = false,
-                    ForceFileSystem = true,
-                };
-                string lsPath = BcApp.CurrentDirectory;
-                if (!string.IsNullOrEmpty(BcApp.CurrentDirectory))
-                    dialog.InputPath = BcApp.CurrentDirectory;
-                if (dialog.ShowDialog() != true)
-                {
-                    editor.Warn("Výběr byl zrušen uživatelem.");
-                    return false;
-                }
-                string knFile = Path.ChangeExtension(Path.GetFileName(new Uri(entry.Link).LocalPath), "." + __theme.ToLower());
-                lsPath = dialog.ResultPath;
-                if (!CanWrite(lsPath)) 
-                {
-                    editor.Warn("Adresář není zapisovatelný!");
-                    return false;
-                }
-                // Kontrola jestli se soubor už v adresáři se stejným jménem nachází
-                string knPath = Path.Combine(lsPath, knFile);
-                if (File.Exists(knPath))
-                {
-                    MessageBoxResult result = MessageBox.Show("Soubor se už v adresáři nachází!", "Přepsat?",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question,
-                        MessageBoxResult.No);
-                    if (result != MessageBoxResult.Yes)
-                    {
-                        editor.Warn("Výběr byl zrušen uživatelem.");
-                        return false;
-                    }
-                    // Soubor může být ještě zamčený
-                    if (IsLocked(knPath))
-                    {
-                        MessageBox.Show(
-                            "Soubor je právě používán jiným procesem nebo je zamčený pro zápis.",
-                            "Soubor nelze přepsat",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                        return false;
-                    }
-                }
-                var data = DownloadDataWithProgress(entry.Link);
-                if (data == null || data.Length == 0)
-                {
-                    editor.Ok("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
-                    return false;
-                }
-                if (TryUnzipData(data, lsPath, out string __saved))
-                {
-                    lsFile = __saved;
-                    return !string.IsNullOrEmpty(__saved);
-                }    
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
             }
-            return false;
+
+            // Stažení dat ze serveru ČÚZK
+            AtomicEntries response = null;
+            try
+            {
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+                    theme, wgs84.L, wgs84.B);
+                Console.WriteLine(url);
+                string json = DownloadString(url);
+                if (string.IsNullOrWhiteSpace(json))
+                    throw new Exception("Prázdná odpověď serveru.");
+                response = Deserialize<AtomicEntries>(json);
+            }
+            catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); return; }
+            if (response?.Entries == null || response.Entries.Count == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+
+            // Výběr konkrétního mapového listu
+            if (!TrySelectEntry(editor, response, _knRegex, out AtomicEntries.Entry entry))
+                return;
+
+            // Výběr místa uložení
+            CommonOpenFileDialog dialog = new CommonOpenFileDialog
+            {
+                Title = "Vyber místo pro uložení souborů",
+                Multiselect = false,
+                ForceFileSystem = true,
+                InputPath = dir,
+            };
+            if (dialog.ShowDialog() != true)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+
+            // Stažení dat
+            byte[] data = DownloadDataWithProgress(entry.Link);
+            if (data == null || data.Length == 0)
+            {
+                editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                return;
+            }
+
+            // Rozbalení a vložení do výkresu
+            if (!TryUnzipData(data, dialog.ResultPath, out string _))
+            {
+                editor.Error("Chyba; Nepovedlo se uložit soubor.");
+                return;
+            }
+
+            editor.Ok("Ok; Soubory uloženy do: " + dialog.ResultPath);
         }
     }
 }

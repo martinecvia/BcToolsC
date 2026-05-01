@@ -73,7 +73,6 @@ namespace BcToolsC.BCad.Commands
                 string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
                     theme, wgs84.L, wgs84.B);
                 Console.WriteLine(url);
-                editor.Info("Kontaktuji ... https://atom.cuzk.cz");
                 string json = DownloadString(url);
                 if (string.IsNullOrWhiteSpace(json))
                     throw new Exception("Prázdná odpověď serveru.");
@@ -170,13 +169,22 @@ namespace BcToolsC.BCad.Commands
         {
             return new[]
             {
-                double.Parse(tfwData[0], CultureInfo.InvariantCulture) * 10_000,
-                double.Parse(tfwData[1], CultureInfo.InvariantCulture),
-                double.Parse(tfwData[2], CultureInfo.InvariantCulture),
-                double.Parse(tfwData[3], CultureInfo.InvariantCulture) * 10_000 * 0.8,
-                double.Parse(tfwData[4], CultureInfo.InvariantCulture),
-                double.Parse(tfwData[5], CultureInfo.InvariantCulture),
+                ReadDouble(tfwData[0]) * 10_000,         // pX
+                ReadDouble(tfwData[1]),                  // yaw
+                ReadDouble(tfwData[2]),                  // pitch
+                ReadDouble(tfwData[3]) * 10_000 * 0.8,   // pY
+                ReadDouble(tfwData[4]),                  // X
+                ReadDouble(tfwData[5]),                  // Y
             };
+        }
+
+        private static double ReadDouble(string s)
+        {
+            // Soubory používají jak , tak . jako desetinnou čárku
+            // pokud by jsme neprováděli konverzi,
+            // může se stát že se bude brát pouze číslo za des. čárkou (což je blbost)
+            return double.Parse(s.Trim().Replace(',', '.'),
+                    CultureInfo.InvariantCulture);
         }
 
         private void ProcessRasterImage(BCadTransaction t, Editor editor,
@@ -212,7 +220,6 @@ namespace BcToolsC.BCad.Commands
                 rasterDef.Dispose();
                 t.MoveToBottom(raster);
             }
-            editor.Ok("Ok; Obrázek byl vložen.");
         }
 
         private void ProcessRasterImage(BCadTransaction t, Editor editor,
@@ -258,7 +265,6 @@ namespace BcToolsC.BCad.Commands
                 new Vector3d(tfw[0], +tfw[2], 0),
                 new Vector3d(tfw[1], -tfw[3], 0));
             t.MoveToBottom(raster);
-            editor.Ok("Ok; Obrázek byl vložen.");
         }
     }
 }
