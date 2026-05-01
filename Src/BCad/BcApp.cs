@@ -17,7 +17,7 @@ using AcadUCS = ZWCAD.ZcadUCS;
 using AcApp = ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.ApplicationServices;
 using AcDb = ZwSoft.ZwCAD.DatabaseServices;
-using ZwSoft.ZwCAD.Runtime;
+using AcRun = ZwSoft.ZwCAD.Runtime;
 using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Geometry;
 
@@ -31,7 +31,7 @@ using AcadUCS = Autodesk.AutoCAD.Interop.Common.AcadUCS;
 using AcApp = Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.ApplicationServices;
 using AcDb  = Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.Runtime;
+using AcRun = Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 
@@ -50,25 +50,52 @@ using BcToolsC.BCad.Inspector;
 using AcRb = RibbonXml;
 using RibbonXml;
 
-[assembly: CommandClass(typeof(BcToolsC.BCad.BcApp))]
+[assembly: AcRun.CommandClass(typeof(BcToolsC.BCad.BcApp))]
 namespace BcToolsC.BCad
 {
     // Spouštění aplikace z registru:
     // https://keanw.com/2015/01/using-environment-variables-inside-autocad-file-path-options.html
-    public class BcApp : IExtensionApplication
+    public class BcApp 
+        : AcRun.IExtensionApplication
     {
         public static string Version => "BcToolsC.NET / 1.0.2605.01-release";
         public static AcadApplication ThisApplication => (AcadApplication)Application.AcadApplication;
         public static AcadDocument ThisDrawing => (AcadDocument)DocumentExtension.GetAcadDocument(Document);
-        public static AcadUCS ThisUCS => (AcadUCS)ThisDrawing.ActiveUCS;
+
+        public static AcadUCS ThisUCS
+        {
+            get
+            {
+                try { return ThisDrawing?.ActiveUCS; }
+                catch { return null; }
+            }
+        }
+
         // Platforma, pro kterou máme spuštěnou instanci
         public static bool IsAcad { get; private set; }
         public static Document Document => AcApp.Core.Application.DocumentManager.MdiActiveDocument;
-        public static RXClass Entity = RXObject.GetClass(typeof(AcDb.Entity));
+        public static AcRun.RXClass Entity = AcRun.RXObject.GetClass(typeof(AcDb.Entity));
 #pragma warning disable CS8603 // Possible null reference return.
-        public static string CurrentDirectory => !string.IsNullOrEmpty(Document?.Database?.Filename)
-            ? Path.GetDirectoryName(Document.Database.Filename)
-            : Path.GetTempPath();
+        public static string CurrentDirectory
+        {
+            get
+            {
+                string lsFile = Document?.Database?.Filename;
+                try
+                {
+                    if (!string.IsNullOrEmpty(lsFile) &&
+                    // ZWCAD vrací AppData\Local\ZWSOFT\ZWCAD\202X\en-US\Template místo prázdého stringu
+                    lsFile.EndsWith(".dwg", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var dir = Path.GetDirectoryName(lsFile);
+                        if (!string.IsNullOrEmpty(dir))
+                            return dir;
+                    }
+                } catch (Exception exception)
+                { Console.WriteLine(exception.Message); }
+                return Path.GetTempPath();
+            }
+        }
 #pragma warning restore CS8603 // Possible null reference return.
         public static bool IsAppProperlyInitialized { get; private set; }
         public static AcDb.Extents2d Envelope { get; private set; }
@@ -96,6 +123,7 @@ namespace BcToolsC.BCad
                 foreach (string resource in assembly.GetManifestResourceNames())
                     hBuilder.RegisterImage(resource.Split('.').Reverse().Skip(1).First(), resource);
                 Ribbons = hBuilder.Build();
+                Application.SystemVariableChanged += Application_SystemVariableChanged;
                 if (ComponentManager.Ribbon == null)
                     ComponentManager.PropertyChanged += ComponentManager_PropertyChanged;
                 else
@@ -178,10 +206,11 @@ namespace BcToolsC.BCad
                 AcApp.Application.RemoveObjectContextMenuExtension(Entity, generalInspector);
         }
 
+        private RibbonTab _tabWatcher = null;
         private void RegisterRibbon()
         {
             // https://keanw.com/wp-content/uploads/tp/WindowsLiveWriter/Ribbon%20layout.png
-            Ribbons.CreateTab("rp_Default");
+            _tabWatcher = Ribbons.CreateTab("rp_Default");
         }
 
         private void ComponentManager_PropertyChanged(object _, 
@@ -191,6 +220,17 @@ namespace BcToolsC.BCad
             {
                 RegisterRibbon();
                 ComponentManager.PropertyChanged -= ComponentManager_PropertyChanged;
+            }
+        }
+
+        private void Application_SystemVariableChanged(object sender, 
+            SystemVariableChangedEventArgs e)
+        {
+            // Při změně prostředí se může stát že ribbony zmizí
+            if (e.Name == "WSCURRENT" && _tabWatcher != null)
+            {
+                if (!ComponentManager.Ribbon.Tabs.Contains(_tabWatcher))
+                    ComponentManager.Ribbon.Tabs.Add(_tabWatcher);
             }
         }
 

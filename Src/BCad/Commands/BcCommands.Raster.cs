@@ -195,17 +195,20 @@ namespace BcToolsC.BCad.Commands
                 dictId = RasterImageDef.CreateImageDictionary(t.Database);
             if (!t.TryGet(dictId, out DBDictionary dict))
                 throw new InvalidOperationException("Databáze rastrových obrázků není dostupná");
-            string tifPath = ResolvePath(key, dir);
-            key = Path.GetFileNameWithoutExtension(key);
-            if (dict.Contains(key))
-                return;
 
             // Získání potřebných cest
+            string tifPath = ResolvePath(key, dir);
             if (string.IsNullOrEmpty(tifPath))
             {
                 editor.Warn("Chyba; Nepovedlo se najít cestu k: " + key);
                 return;
             }
+
+            // Konstrola v databázi
+            key = Path.GetFileNameWithoutExtension(key);
+            if (dict.Contains(key))
+                return;
+
             // Vytvoření rasterového obrázku
             var rasterDef = new RasterImageDef { SourceFileName = tifPath };
             rasterDef.Load();
