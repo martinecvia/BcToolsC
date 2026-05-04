@@ -16,49 +16,49 @@ using BcToolsC.Models;
 
 namespace BcToolsC.BCad.Commands.Models
 {
-    public sealed class Ge_AlignTextToCurve 
+    public sealed class Mc_AlignTextToCurve 
         : EntityJig
     {
         private readonly Editor editor;
         private readonly Curve curve;
         private readonly Entity field;
+        private readonly JigPromptPointOptions options;
 
         private Point3d? __point;
         public double OffsetFactor { get; set; } = 1.0;
-        public double Rotation { get; set; } = 0.0;
-        private bool Readable { get; set; } = true;
+        public ANGLE Rotation { get; set; } = 0.0;
 
-        public Ge_AlignTextToCurve(Editor editor, Curve curve, Entity field) : base(field)
+        public Mc_AlignTextToCurve(Editor editor, Curve curve, Entity field) : base(field)
         {
             this.editor = editor;
             this.curve = curve;
             this.field = field;
-        }
-
-        protected override SamplerStatus Sampler(JigPrompts prompts)
-        {
-            JigPromptPointOptions options = new JigPromptPointOptions("\nUmístěte text na křivku [Offset(O)/Rotace(R)/Čitelnost(Y)]: ")
+            options = new JigPromptPointOptions("\nUmístěte text na křivku [(O)ffset/(R)otace]: ")
             {
                 UserInputControls = UserInputControls.Accept3dCoordinates |
                                     UserInputControls.NoNegativeResponseAccepted,
             };
             options.Keywords.Add("O");
             options.Keywords.Add("R");
-            options.Keywords.Add("Y");
+        }
+
+        protected override SamplerStatus Sampler(JigPrompts prompts)
+        {
             PromptPointResult evResult = prompts.AcquirePoint(options);
             if (evResult.Status == PromptStatus.Keyword)
             {
                 switch (evResult.StringResult)
                 {
                     case "O":
-                        return SamplerStatus.OK;
+                        var o = editor.GetDistance("\nZadej měřítko:");
+                        Console.WriteLine(o?.Value);
+                        break;
                     case "R":
-                        return SamplerStatus.OK;
-                    case "Y":
-                        Readable = !Readable;
-                        return SamplerStatus.OK;
+                        var r = editor.GetAngle("\nZadej úhel:");
+                        Console.WriteLine(r?.Value);
+                        break;
                     default:
-                        return SamplerStatus.Cancel;
+                        break;
                 }
             } else if (evResult.Status == PromptStatus.OK) {
                 if (__point != null && __point.Value.IsEqualTo(evResult.Value))
@@ -79,33 +79,47 @@ namespace BcToolsC.BCad.Commands.Models
                 Vector3d t = curve.GetFirstDerivative(closestPoint).GetNormal();
                 ANGLE angle = t.AngleOnPlane(new Plane(Point3d.Origin, Vector3d.ZAxis));
                 angle += Rotation;
-                if (Readable && angle > Math.PI * 0.5 && angle <= Math.PI * 1.5)
+                var flipped = false;
+                if (angle > Math.PI * 0.5 && angle <= Math.PI * 1.5)
+                {
                     angle += Math.PI;
+                    flipped = true;
+                }
                 Vector3d n = t.RotateBy(Math.PI / 2, Vector3d.ZAxis);
-                TryChangeField(closestPoint, n, angle);
+                Vector3d cursorDirection = point - closestPoint;
+                int side = cursorDirection.DotProduct(n) >= 0 ? 1 : -1;
+                Vector3d offsetDirection = n * side;
+                // Určení zarovnání (Justification)
+                bool shouldUseBottom = side == 1;
+                if (flipped) shouldUseBottom = !shouldUseBottom;
+                TryChangeField(closestPoint, offsetDirection, shouldUseBottom, angle);
                 return true;
             } catch (Exception exception)
             { editor.Error("Chyba; " + exception.Message); }
             return false;
         }
 
-        private void TryChangeField(Point3d point, Vector3d normal, 
+        private void TryChangeField(Point3d point, Vector3d offset, bool justify,
             ANGLE a)
         {
             double h;
             Point3d p;
+            AttachmentPoint pA = justify
+                ? AttachmentPoint.BottomCenter
+                : AttachmentPoint.TopCenter;
             if (field is DBText dText)
             {
                 h = dText.Height;
-                p = point + (normal * (OffsetFactor * h));
+                p = point + (offset * (OffsetFactor * h));
                 dText.Position = p;
-                if (dText.Justify != AttachmentPoint.BaseLeft)
-                    dText.AlignmentPoint = p;
+                dText.Justify = pA;
+                dText.AlignmentPoint = p;
                 dText.Rotation = a;
             } else if (field is MText mText) {
                 h = mText.TextHeight;
-                p = point + (normal * (OffsetFactor * h));
+                p = point + (offset * (OffsetFactor * h));
                 mText.Location = p;
+                mText.Attachment = pA;
                 mText.Rotation = a;
             }
         }

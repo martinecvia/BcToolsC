@@ -89,7 +89,7 @@ namespace BcToolsC.BCad.Commands
         }
 
         [AcRun.CommandMethod("BCTOOLSC_MC_AC")]
-        public void Ge_AlignTextToCurve()
+        public void Mc_AlignTextToCurve()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
@@ -122,7 +122,7 @@ namespace BcToolsC.BCad.Commands
                     editor.Error("Chyba; Reference neodkazuje na objekt v databázi [E_MEMORY_INVALID].");
                     return;
                 }
-                var jig = new Ge_AlignTextToCurve(editor, curve, (Entity)field);
+                var jig = new Mc_AlignTextToCurve(editor, curve, (Entity)field);
                 PromptResult evResult = editor.Drag(jig);
                 if (evResult.Status == PromptStatus.OK)
                 {

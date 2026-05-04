@@ -19,7 +19,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\FilePeekHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\ANGLE.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\LAYER.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)models\ReliefRepository.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)models\Repository.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\SCALE.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)models\TimeoutedWebClient.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)properties\AssemblyInfo.cs" />
@@ -40,7 +40,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_dt4_32.ico" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_profile_16.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_relief_cz_32.ico" />
@@ -53,9 +52,6 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_streetview_16.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_cuzk_32.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_contours_32.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -65,20 +61,27 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_3dface_32.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_excel_16.png" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_seat_16.ico" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_ucs_32.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_land_download_32.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_32.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_profile_contours_16.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_profile_solid_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_profile_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_curvetext_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_point_cloud_16.ico" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_proxy_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_attach_raster_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_info_16.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_line_connect_16.ico" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\3278974.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\5226254.png" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_land_download_32.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_laz_32.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_laz_download_32.ico" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_raster_32.png" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\rp_proxy_16.png" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\0704-A-13-2.tif" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\5055539.png" />
