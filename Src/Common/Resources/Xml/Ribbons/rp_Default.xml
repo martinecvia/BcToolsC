@@ -36,7 +36,7 @@
 	<RibbonPanel>
 		<RibbonPanelSource>
 			<Title><![CDATA[ ]]></Title>
-			<RibbonSplitButton Text="Stahování&#13;z Atom-u" ShowText="True" Size="Large"
+			<RibbonSplitButton Text="Stahování&#13;podkladů" ShowText="True" Size="Large"
 							   Orientation="Vertical">
 				<RibbonButton Text="Vrstevnice (.dgn)" ShowText="True" CommandHandler="BCTOOLSC_KN_VR"
 							  LargeImage="rp_contours_32" Size="Large" />
