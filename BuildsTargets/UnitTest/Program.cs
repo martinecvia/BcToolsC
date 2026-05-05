@@ -100,6 +100,7 @@ static byte[] SerializeAndCompressExe(byte[] data)
     return ms.ToArray();
 }
 var s = SerializeToBase64(SerializeAndCompressExe(exeData));
+Console.WriteLine(s.Length);
 static byte[] DecompressAndDeserializeExe(byte[] data)
 {
     using var sm = new MemoryStream(data);

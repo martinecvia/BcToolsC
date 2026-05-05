@@ -19,29 +19,37 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
+    - name: Install .NET Framework 4.5 Developer Pack
+      run: |
+        choco install netfx-4.5-devpack -y --no-progress
+
     - name: Install .NET Framework 4.7 Developer Pack
       run: |
         choco install netfx-4.7-devpack -y --no-progress
-        
+    
+    - name: Install .NET 8
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1
       
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
-
-    - name: Setup .NET 8 SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
       
     - name: Restore Packages
       run: nuget restore BcToolsC.sln
 
-    # Build .NET 4.7 project (ZWCAD)
+    # Build .NET 4.5 project
+    - name: Build .NET 4.5 (ACAD.17)
+      run: msbuild BuildsTargets/BcToolsAC17/BcToolsAC17.csproj /t:Build /p:Configuration=Release /p:DefineConstants=NET45
+
+    # Build .NET 4.7 project
     - name: Build .NET 4.7 (ZCAD.25)
-      run: msbuild BuildsTargets/BcToolsZC25/BcToolsZC25.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
+      run: msbuild BuildsTargets/BcToolsZC25/BcToolsZC25.csproj /t:Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
     - name: Build .NET 4.7 (ZCAD.26)
-      run: msbuild BuildsTargets/BcToolsZC26/BcToolsZC26.csproj /t:Restore,Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
+      run: msbuild BuildsTargets/BcToolsZC26/BcToolsZC26.csproj /t:Build /p:Configuration=Release /p:DefineConstants=ZWCAD /p:AllowUnsafeBlocks=true
 
     # Build .NET 8.0 project
     - name: Build .NET 8.0 (ACAD.25)

@@ -30,6 +30,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcToolsZC26", "BuildsTarget
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcToolsAC26", "BuildsTargets\BcToolsAC26\BcToolsAC26.csproj", "{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BcToolsAC17", "BuildsTargets\BcToolsAC17\BcToolsAC17.csproj", "{FA6E3404-A00D-4E28-82DF-F992CD5A36AC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +58,10 @@ Global
 		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5E9D16B-E92E-4CAA-961C-567AB67F71D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA6E3404-A00D-4E28-82DF-F992CD5A36AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA6E3404-A00D-4E28-82DF-F992CD5A36AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA6E3404-A00D-4E28-82DF-F992CD5A36AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA6E3404-A00D-4E28-82DF-F992CD5A36AC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -90,5 +96,9 @@ Global
 		Src\Common\Common.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
 		Src\Topology\Topology.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5
 		RibbonXml\Shared\Shared.projitems*{e12bfdd6-c393-4d7c-a138-72372c23bbbc}*SharedItemsImports = 13
+		RibbonXml\Shared\Shared.projitems*{fa6e3404-a00d-4e28-82df-f992cd5a36ac}*SharedItemsImports = 4
+		Src\BCadObjectInspector\BCadObjectInspector.projitems*{fa6e3404-a00d-4e28-82df-f992cd5a36ac}*SharedItemsImports = 4
+		Src\BCad\BCad.projitems*{fa6e3404-a00d-4e28-82df-f992cd5a36ac}*SharedItemsImports = 4
+		Src\Common\Common.projitems*{fa6e3404-a00d-4e28-82df-f992cd5a36ac}*SharedItemsImports = 4
 	EndGlobalSection
 EndGlobal

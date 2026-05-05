@@ -26,7 +26,9 @@ using Autodesk.AutoCAD.EditorInput;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+#if !NET45
 using NetTopologySuite.Geometries;
+#endif
 
 namespace BcToolsC.BCad.Commands
 {
@@ -52,8 +54,9 @@ namespace BcToolsC.BCad.Commands
                 Id = id;
                 Kuid = kuid;
             }
-
+#if !NET45
             public LinearRing Geometry { get; set; }
+#endif
             public Point2d Point { get; set; }
             public double Area { get; set; }
             public string Name { get; set; }
@@ -142,6 +145,7 @@ namespace BcToolsC.BCad.Commands
             Editor editor = document.Editor;
 
             if (!ValidateModelSpace(editor, db)) return;
+            if (!ValidateAppVersion(editor)) editor.Warn("Některé funkce můžou být nekompletní.");
 
             // Získání vstupu od uživatele
             var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
@@ -173,20 +177,6 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
 
-            // Vytvoření řezací křivky
-            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
-            Coordinate[] vertices = new Coordinate[curve.Vertices.Count];
-            for (int i = 0; i < curve.Vertices.Count; i++)
-            {
-                var v = curve.Vertices[i];
-                // Ignorujeme Z souřadnici křivky, protože ji nemáme jak porovnat
-                vertices[i] = new Coordinate(v.X, v.Y);
-            }
-            if (!vertices[0].Equals2D(vertices[curve.Vertices.Count - 1]))
-            {
-                editor.Warn("Nebyla nalezena uzavřená křivka pro tuto operaci.");
-                return;
-            }
             // Stažení dat ze serveru ČÚZK
             AtomicEntries response = null;
             try
@@ -218,9 +208,28 @@ namespace BcToolsC.BCad.Commands
                 editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                 return;
             }
-
+#if !NET45
+            // Vytvoření řezací křivky
+            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
+            Coordinate[] vertices = new Coordinate[curve.Vertices.Count];
+            for (int i = 0; i < curve.Vertices.Count; i++)
+            {
+                var v = curve.Vertices[i];
+                // Ignorujeme Z souřadnici křivky, protože ji nemáme jak porovnat
+                vertices[i] = new Coordinate(v.X, v.Y);
+            }
+            if (!vertices[0].Equals2D(vertices[curve.Vertices.Count - 1]))
+            {
+                editor.Warn("Nebyla nalezena uzavřená křivka pro tuto operaci.");
+                return;
+            }
             var polyline = factory.CreatePolygon(vertices);
-            var parcels = Kn_CollectParcels(data, factory);
+#endif
+            var parcels = Kn_CollectParcels(data
+#if !NET45
+                , factory
+#endif
+                );
             /*
             int q = parcels.Count;
             if (q == 0)
@@ -260,7 +269,11 @@ namespace BcToolsC.BCad.Commands
             */
         }
 
-        static List<AcParcel> Kn_CollectParcels(byte[] data, GeometryFactory factory)
+        static List<AcParcel> Kn_CollectParcels(byte[] data
+#if !NET45
+            , GeometryFactory factory
+#endif
+            )
         {
             List<AcParcel> result = new List<AcParcel>();
             if (data == null || data.Length == 0)
@@ -313,6 +326,7 @@ namespace BcToolsC.BCad.Commands
                                                 double.Parse(posList[0], CultureInfo.InvariantCulture),
                                                 double.Parse(posList[1], CultureInfo.InvariantCulture));
                                         }
+#if !NET45
                                         else if (reader.LocalName == "posList")
                                         {
                                             string pos = reader.ReadElementContentAsString();
@@ -344,6 +358,7 @@ namespace BcToolsC.BCad.Commands
                                             }
                                             parcel.Geometry = geometry;
                                         }
+#endif
                                     }
                                 }
                                 if (parcel.Area != 0)

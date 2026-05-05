@@ -23,7 +23,9 @@ using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+#if !NET45
 using NetTopologySuite.Geometries;
+#endif
 
 namespace BcToolsC.BCad.Commands
 {
@@ -215,7 +217,7 @@ namespace BcToolsC.BCad.Commands
             }
             return result;
         }
-
+#if !NET45
         class Point3dXYComparer : IEqualityComparer<Point3d>
         {
             readonly double _tolerance;
@@ -226,7 +228,7 @@ namespace BcToolsC.BCad.Commands
             private long Q(double value) => (long)Math.Round(value / _tolerance);
             public int GetHashCode(Point3d p) => (Q(p.X).GetHashCode() * 397) ^ Q(p.Y).GetHashCode();
         }
-
+#endif
         [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_3DFACE")]
         public void Mc_Profile3dFace()
         {
@@ -235,6 +237,9 @@ namespace BcToolsC.BCad.Commands
             if (document == null) return;
             Database db = document.Database;
             Editor editor = document.Editor;
+
+            if (!ValidateAppVersion(editor)) return;
+#if !NET45
             if (!db.TileMode)
             {
                 editor.Warn("Povoleno pouze v modelovém prostoru.");
@@ -396,14 +401,21 @@ namespace BcToolsC.BCad.Commands
         user_closed_dialog:
             editor.Warn("Výběr byl zrušen uživatelem.");
             return;
+#endif
         }
 
         [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_DT4")]
         public void Mc_ProfileDt4()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
-        }
+            AcApp.Document document = BcApp.Document;
+            if (document == null) return;
+            Database db = document.Database;
+            Editor editor = document.Editor;
 
+            if (!ValidateAppVersion(editor)) return;
+        }
+#if !NET45
         private static List<Point3d> Profiler_CollectIntersectsWith(Geometry intersection,
             int recursiveDepth = 0)
         {
@@ -429,5 +441,6 @@ namespace BcToolsC.BCad.Commands
             }
             return result;
         }
+#endif
     }
 }

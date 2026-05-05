@@ -22,6 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Misc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\models\Mc_AlignTextToCurve.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)RibbonLayer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Geometry.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)transactions\BCadTransaction.Layer.cs" />

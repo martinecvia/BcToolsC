@@ -25,7 +25,9 @@ using Autodesk.AutoCAD.Geometry;
 using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
 using BcToolsC.BCad.Transactions;
+#if !NET45
 using NetTopologySuite.Geometries;
+#endif
 using System.Windows;
 using System.Text.RegularExpressions;
 using System.Linq;
@@ -89,7 +91,7 @@ namespace BcToolsC.BCad.Commands
             else
                 return f(r);
         }
-
+#if !NET45
         static bool GetIntersectionArea(Geometry polygon, Geometry ring,
             out Geometry intersection, out double area)
         {
@@ -103,6 +105,7 @@ namespace BcToolsC.BCad.Commands
             Console.WriteLine(intersection.Area);
             return inside;
         }
+#endif
 
         static Point3dCollection GetPolylineVertices(BCadTransaction t, Curve curve)
         {
@@ -450,6 +453,14 @@ namespace BcToolsC.BCad.Commands
                 MessageBoxImage.Question,
                 MessageBoxResult.No);
             return result == MessageBoxResult.Yes;
+        }
+
+        static bool ValidateAppVersion(Editor editor)
+        {
+            var limited = BcApp.IsAppLimitedByNetVersion;
+            var supportedPlatform = BcApp.IsAcad ? "AutoCAD" : "ZwCAD";
+            if (limited) editor.Warn($"Akce vyžaduje vyšší verzi {supportedPlatform}.");
+            return !limited;
         }
 
         static bool ValidateModelSpace(Editor editor, Database database)

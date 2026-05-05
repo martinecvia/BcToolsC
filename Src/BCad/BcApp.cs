@@ -43,7 +43,9 @@ using Autodesk.Windows;
 using BcToolsC.BCad.Commands;
 using BcToolsC.Models;
 using BcToolsC.Helpers;
+#if !NET45
 using NetTopologySuite;
+#endif
 using BcToolsC.BCad.Inspector;
 
 // RibbonXml
@@ -98,6 +100,7 @@ namespace BcToolsC.BCad
         }
 #pragma warning restore CS8603 // Possible null reference return.
         public static bool IsAppProperlyInitialized { get; private set; }
+        public static bool IsAppLimitedByNetVersion { get; private set; }
         public static AcDb.Extents2d Envelope { get; private set; }
         public static AcRb.RibbonXml Ribbons { get; private set; }
         static BcAppInspector defaultInspector; // Default
@@ -118,7 +121,13 @@ namespace BcToolsC.BCad
             {
                 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
                 AcRb.Builder hBuilder = new AcRb.Builder()
-                    .SetDefaultHandler(typeof(BcAppRibbonCommandH));
+                    .SetDefaultHandler(typeof(BcAppRibbonCommandH))
+                    .RegisterControlsType<RibbonLayerHighlight>("TargetsFor@.Highlight");
+#if NET45
+                hBuilder.RegisterControlsType<BcToolsC.Compatibility.Net45_RibbonLayerSpecial>("SpecialFor@.NETFramework4.5");
+                hBuilder.RegisterControlsType<BcToolsC.Compatibility.Net45_RibbonLayerLimited>("LimitedFor@.NETFramework4.5");
+                IsAppLimitedByNetVersion = true;
+#endif
                 Assembly assembly = Assembly.GetExecutingAssembly();
                 foreach (string resource in assembly.GetManifestResourceNames())
                     hBuilder.RegisterImage(resource.Split('.').Reverse().Skip(1).First(), resource);
@@ -184,7 +193,9 @@ namespace BcToolsC.BCad
                 }
                 Envelope = new AcDb.Extents2d(new Point2d(minX, minY), new Point2d(maxX, maxY));
                 BcCommands.Rf_TypeArray_Cz = vertice;
-                NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG);
+#if !NET45
+                NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG); 
+#endif
                 defaultInspector = new BcAppInspector("Inspektor", new MenuItem("Entity"), new MenuItem("Database"), new MenuItem("Table"), new MenuItem("Dictionary"));
                 generalInspector = new BcAppInspector("Informace");
                 AcApp.Application.AddDefaultContextMenuExtension(defaultInspector); AcApp.Application.AddObjectContextMenuExtension(Entity, generalInspector);

@@ -13,20 +13,25 @@
 	<RibbonPanel>
 		<RibbonPanelSource>
 			<Title><![CDATA[Práce s mapou]]></Title>
-			<RibbonButton Text="S-JTSK&#13;zobrazení" ShowText="True" CommandHandler="BCTOOLSC_UC_UCS"
+			<RibbonButton Description="Otočí souřadnou osu do korektní konvence."
+				          Text="S-JTSK&#13;zobrazení" ShowText="True" CommandHandler="BCTOOLSC_UC_UCS"
 						  LargeImage="rp_ucs_32" Size="Large"
 						  Orientation="Vertical" />
-			<RibbonButton Text="Vlož&#13;reliéf" ShowText="True" CommandHandler="BCTOOLSC_RF_CZ"
+			<RibbonButton Id="TargetsFor@.DWH" Tag="New" Description="Vloží obrys ČR do výkresu, bez ohledu na UCS."
+				          Text="Vlož&#13;reliéf" ShowText="True" CommandHandler="BCTOOLSC_RF_CZ"
 						  LargeImage="rp_relief_cz_32" Size="Large"
 						  Orientation="Vertical" />
 			<RibbonRowPanel>
-				<RibbonButton Text="StreetView" ShowText="True" CommandHandler="BCTOOLSC_MP_GM_STREET"
+				<RibbonButton Description="V místě kliknutí otevře streetview v nainstalovaném prohlážeči."
+					          Text="StreetView" ShowText="True" CommandHandler="BCTOOLSC_MP_GM_STREET"
 							  Image="rp_streetview_16" />
 				<RibbonRowBreak />
-				<RibbonButton Text="Google" ShowText="True" CommandHandler="BCTOOLSC_MP_GM"
+				<RibbonButton Description="V místě kliknutí otevře google.com v nainstalovaném prohlážeči."
+					          Text="Google" ShowText="True" CommandHandler="BCTOOLSC_MP_GM"
 							  Image="rp_google_16" />
 				<RibbonRowBreak />
-				<RibbonButton Text="Mapy.com" ShowText="True" CommandHandler="BCTOOLSC_MP_MC"
+				<RibbonButton Description="V místě kliknutí otevře mapy.com v nainstalovaném prohlážeči."
+					          Text="Mapy.com" ShowText="True" CommandHandler="BCTOOLSC_MP_MC"
 							  Image="rp_mapy_16" />
 			</RibbonRowPanel>
 		</RibbonPanelSource>
@@ -38,31 +43,26 @@
 			<Title><![CDATA[ ]]></Title>
 			<RibbonSplitButton Text="Stahování&#13;podkladů" ShowText="True" Size="Large"
 							   Orientation="Vertical">
-				<RibbonButton Text="Vrstevnice (.dgn)" ShowText="True" CommandHandler="BCTOOLSC_KN_VR"
-							  LargeImage="rp_contours_32" Size="Large" />
-				<RibbonButton Text="Rastr (.tif)" ShowText="True" CommandHandler="BCTOOLSC_TF_DW"
-							  LargeImage="rp_raster_32" Size="Large" />
-				<RibbonButton Text="Katastr (.dxf)" ShowText="True" CommandHandler="BCTOOLSC_KN_AT"
-							  LargeImage="rp_land_32" Size="Large" />
-				<RibbonButton Text="DMR 5G (.laz)" ShowText="True" CommandHandler="BCTOOLSC_LZ_AT"
+				<!-- Ok --><RibbonButton Text="Vrstevnice (.dgn)" ShowText="True" CommandHandler="BCTOOLSC_KN_VR" LargeImage="rp_contours_32" Size="Large" />
+				<!-- Ok --><RibbonButton Text="Rastr (.tif)" ShowText="True" CommandHandler="BCTOOLSC_TF_DW" LargeImage="rp_raster_32" Size="Large" />
+				<!-- Ok --><RibbonButton Text="Katastr (.dxf)" ShowText="True" CommandHandler="BCTOOLSC_KN_AT" LargeImage="rp_land_32" Size="Large" />
+				<RibbonButton Id="TargetsFor@.DWH" Tag="New" Description="Možnost vložení bodů z DMR do výkresu"
+					          Text="DMR 5G (.laz)" ShowText="True" CommandHandler="BCTOOLSC_LZ_AT"
 							  LargeImage="rp_laz_32" Size="Large"
 							  IsEnabled="False" />
-				<RibbonButton Text="Stažení katastru" ShowText="True" CommandHandler="BCTOOLSC_KN_DW"
-							  LargeImage="rp_land_download_32" Size="Large" />
-				<RibbonButton Text="Stažení DMR" ShowText="True" CommandHandler="BCTOOLSC_LZ_DW"
+				<!-- Ok --><RibbonButton Text="Stažení katastru" ShowText="True" CommandHandler="BCTOOLSC_KN_DW" LargeImage="rp_land_download_32" Size="Large" />
+				<RibbonButton Id="TargetsFor@.DWH" Tag="New" Description="Možnost stažení DMR do vybrané složky z místa kliknutí"
+							  Text="Stažení DMR" ShowText="True" CommandHandler="BCTOOLSC_LZ_DW"
 							  LargeImage="rp_laz_download_32" Size="Large"
 							  IsEnabled="False" />
 			</RibbonSplitButton>
-			<RibbonButton Text="Profil křivky&#13;s 3dFace" ShowText="True" CommandHandler="BCTOOLSC_PR_PROFILE_3DFACE"
-						  LargeImage="rp_3dface_32" Size="Large"
-						  Orientation="Vertical" />
+			<!-- Ok --><RibbonButton Id="SpecialFor@.NETFramework4.5" Text="Profil křivky&#13;s 3dFace" ShowText="True" CommandHandler="BCTOOLSC_PR_PROFILE_3DFACE" LargeImage="rp_3dface_32" Size="Large" Orientation="Vertical" />
 			<RibbonButton Text="Profil křivky&#13;s DT4" ShowText="True" CommandHandler="BCTOOLSC_PR_PROFILE_DT4"
 						  LargeImage="rp_dt4_32" Size="Large"
 						  Orientation="Vertical" 
 						  IsEnabled="False" />
 			<RibbonRowPanel>
-				<RibbonButton Text="Profil křivky" CommandHandler="BCTOOLSC_PR_PROFILE"
-							  Image="rp_profile_16" />
+				<!-- Ok --><RibbonButton Text="Profil křivky" CommandHandler="BCTOOLSC_PR_PROFILE" Image="rp_profile_16" />
 				<RibbonRowBreak />
 				<RibbonButton Text="Profil křivky (SOLID)" CommandHandler="BCTOOLSC_PR_PROFILE_SOLID"
 							  Image="rp_profile_solid_16" />
@@ -83,12 +83,10 @@
 							  IsEnabled="False" />
 			</RibbonRowPanel>
 			<RibbonRowPanel>
-				<RibbonButton Text="Zasazení rastru" ShowText="True" CommandHandler="BCTOOLSC_TF_ST"
-							  Image="rp_attach_raster_16" />
+				<!-- Ok --><RibbonButton Text="Zasazení rastru" ShowText="True" CommandHandler="BCTOOLSC_TF_ST" Image="rp_attach_raster_16" />
 				<RibbonRowBreak />
-				<RibbonButton Text="Info o parcele" ShowText="True" CommandHandler="BCTOOLSC_KN_IN"
-							  Image="rp_info_16" 
-							  IsEnabled="False" />
+				<RibbonButton Id="LimitedFor@.NETFramework4.5" Text="Info o parcele" ShowText="True" CommandHandler="BCTOOLSC_KN_IN"
+							  Image="rp_info_16" />
 				<RibbonRowBreak />
 				<RibbonButton Text="PointCloud (.txt)" ShowText="True" CommandHandler="BCTOOLSC_MC_PC"
 							  Image="rp_point_cloud_16" 
