@@ -5,17 +5,20 @@ using System; // Keep for .NET 4.6
 using AcApp = ZwSoft.ZwCAD.ApplicationServices;
 using AcRun = ZwSoft.ZwCAD.Runtime;
 using ZwSoft.ZwCAD.DatabaseServices;
+using ZwSoft.ZwCAD.Geometry;
 using ZwSoft.ZwCAD.EditorInput;
 #else
 using AcApp = Autodesk.AutoCAD.ApplicationServices;
 using AcRun = Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.EditorInput;
 #endif
 #endregion
 
 using static BcToolsC.BCad.Transactions.BCadTransaction;
 using BcToolsC.BCad.Commands.Models;
+using BcToolsC.Models;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -24,8 +27,8 @@ namespace BcToolsC.BCad.Commands
         readonly AcRun.RXClass _proxyEntity = AcRun.RXObject.GetClass(typeof(ProxyEntity));
         readonly AcRun.RXClass _proxyObject = AcRun.RXObject.GetClass(typeof(ProxyObject));
 
-        [AcRun.CommandMethod("BCTOOLSC_MC_RM_PROXY")]
-        public void Mc_ClearProxy()
+        [AcRun.CommandMethod("BCTOOLSC_MC_RP")]
+        public void Mc_RemoveProxy()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
@@ -60,8 +63,9 @@ namespace BcToolsC.BCad.Commands
                             {
                                 if (id.ObjectClass.IsDerivedFrom(_proxyEntity))
                                 {
-                                    // ProxyEntity
-                                    if (t.TryGet(id, out ProxyEntity e, OpenMode.ForWrite) && !e.IsErased && (e.ProxyFlags & 1) == 1)
+                                    if (t.TryGet(id, out ProxyEntity e, OpenMode.ForWrite) && !e.IsErased
+                                    // Bit 1 v ProxyFlags určuje, zda je objekt smazatelný
+                                    && (e.ProxyFlags & 1) == 1)
                                     {
                                         e.Erase(true);
                                         ++i;
@@ -69,8 +73,9 @@ namespace BcToolsC.BCad.Commands
                                 }
                                 else if (id.ObjectClass.IsDerivedFrom(_proxyObject))
                                 {
-                                    // ProxyObject
-                                    if (t.TryGet(id, out ProxyObject o, OpenMode.ForWrite) && !o.IsErased && (o.ProxyFlags & 1) == 1)
+                                    if (t.TryGet(id, out ProxyObject o, OpenMode.ForWrite) && !o.IsErased
+                                    // Bit 1 v ProxyFlags určuje, zda je objekt smazatelný
+                                    && (o.ProxyFlags & 1) == 1)
                                     {
                                         o.Erase(true);
                                         ++i;
@@ -84,7 +89,7 @@ namespace BcToolsC.BCad.Commands
                     { }
                 });
                 progress.Stop();
-                editor.Ok("Ok; Smazaných proxy objektů: " + i);
+                editor.Ok("Smazaných proxy objektů: " + i);
             }
         }
 
@@ -98,19 +103,19 @@ namespace BcToolsC.BCad.Commands
             Editor editor = document.Editor;
 
             if (!ValidateModelSpace(editor, db)) return;
+
+            // Výběr textu a křivky
             var __field = GetEntityFromPrompt(editor, "Vyberte text",
             typeof(DBText), typeof(MText));
             if (__field == ObjectId.Null)
             {
-                editor.Warn("Nebyla nalazena žádná data.");
+                editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
-            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline),
-            typeof(Arc), typeof(Circle), typeof(Ellipse));
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku", typeof(Curve));
             if (__curve == ObjectId.Null)
             {
-                editor.Warn("Nebyla nalazena žádná data.");
+                editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
             using (var t = db.TransactionManager.StartTransaction())
@@ -122,20 +127,136 @@ namespace BcToolsC.BCad.Commands
                     editor.Error("Chyba; Reference neodkazuje na objekt v databázi [E_MEMORY_INVALID].");
                     return;
                 }
-                var jig = new Mc_AlignTextToCurve(editor, curve, (Entity)field);
-                PromptResult evResult = editor.Drag(jig);
-                if (evResult.Status == PromptStatus.OK)
+
+                // Výchozí parametry
+                double o = 1.0;
+                double r = 0.0;
+
+                bool running = true;
+                while (running)
                 {
-                    t.Commit();
-                    return;
-                }
-                else
-                {
-                    t.Abort();
-                    editor.Warn("Výběr byl zrušen uživatelem.");
-                    return;
+                    var jig = new Mc_AlignTextToCurve(editor, curve, (Entity)field)
+                    {
+                        OffsetFactor = o,
+                        Rotation = r
+                    };
+                    PromptResult evResult = editor.Drag(jig);
+                    if (evResult.Status == PromptStatus.OK)
+                    {
+                        t.Commit();
+                        running = false;
+                    }
+                    else if (evResult.Status == PromptStatus.Keyword)
+                    {
+                        if (evResult.StringResult == "O")
+                        {
+                            var options = new PromptDoubleOptions("\nZadejte měřítko odsazení: ") { DefaultValue = o };
+                            var kwResult = editor.GetDouble(options);
+                            if (kwResult.Status == PromptStatus.OK) o = kwResult.Value;
+                        }
+                        else if (evResult.StringResult == "R")
+                        {
+                            var options = new PromptAngleOptions("\nZadejte úhel rotace textu: ") { DefaultValue = r };
+                            var kwResult = editor.GetAngle(options);
+                            if (kwResult.Status == PromptStatus.OK) r = kwResult.Value;
+                        }
+                    }
+                    else
+                    {
+                        t.Abort();
+                        editor.Warn("Výběr byl zrušen uživatelem.");
+                        running = false;
+                    }
                 }
             }
+        }
+
+        [AcRun.CommandMethod("BCTOOLSC_MC_SV")]
+        public void Mc_SurveyTable()
+        {
+            if (!BcApp.IsAppProperlyInitialized) return;
+            AcApp.Document document = BcApp.Document;
+            if (document == null) return;
+            Database db = document.Database;
+            Editor editor = document.Editor;
+
+            if (!ValidateModelSpace(editor, db)) return;
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
+            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline),
+            typeof(Arc), typeof(Circle));
+            if (__curve == ObjectId.Null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            var scale = GetScaleFromPrompt(editor, "Zadejte měřítko Y", previousScaleY)
+                ?? new SCALE(1_000, 1_000);
+            previousScaleY = (int)scale.Y;
+            Call(t =>
+            {
+                if (!t.TryGet(__curve, out Curve curve))
+                {
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return;
+                }
+                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
+                Point3dCollection vertice = GetPolylineVertices(t, curve);
+                if (vertice.Count < 2)
+                {
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return;
+                }
+                if (curve.Closed) vertice.Add(vertice[0]);
+
+                // Kontrola jestli má smysl vykreslovat část pro výšku Z
+                var hasZ = false;
+                for (int i = 0; i < vertice.Count; i++)
+                {
+                    var p = vertice[i];
+                    if (Math.Abs(p.Z) > .1)
+                    {
+                        hasZ = true;
+                        break;
+                    }
+                }
+
+                // Vytvoření tabulky
+                Table table = new Table();
+                table.SetDatabaseDefaults();
+                table.Position = point;
+
+                int cols = hasZ ? 4 : 3;
+                int rows = vertice.Count
+                // Navíc pro hlavičku
+                + 2;
+                table.SetSize(rows, cols);
+                table.GenerateLayout();
+                table.Cells[0, 0].TextString = "Vytyčení";
+                table.Cells[1, 0].TextString = "n";
+                table.Cells[1, 1].TextString = "Y (m)";
+                table.Cells[1, 2].TextString = "X (m)";
+                if (hasZ) table.Cells[1, 3].TextString = "Z (m)";
+                for (int i = 0; i < vertice.Count; i++)
+                {
+                    int row = i + 2;
+                    Point3d p = vertice[i];
+                    table.Cells[row, 0].TextString = (i + 1).ToString(); // N (Index)
+                    table.Cells[row, 1].TextString = Math.Abs(p.Y).ToString("F2"); // Y
+                    table.Cells[row, 2].TextString = Math.Abs(p.X).ToString("F2"); // X
+                    if (hasZ) table.Cells[row, 3].TextString = Math.Abs(p.Z).ToString("F2");
+                }
+                table.TransformBy(Matrix3d.Scaling(scale.sY, point));
+                t.AddToModelSpace(table);
+            });
         }
     }
 }

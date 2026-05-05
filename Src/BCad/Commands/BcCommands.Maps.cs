@@ -23,7 +23,7 @@ namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands
     {
-        [AcRun.CommandMethod("BCTOOLSC_MP_GM_STREET")]
+        [AcRun.CommandMethod("BCTOOLSC_MP_GS")]
         public void Mp_Map_GoogleMapsStreetView() => ShowMapFor("https://maps.google.com", "/maps?q=&layer=c&cbll={0},{1}");
         [AcRun.CommandMethod("BCTOOLSC_MP_GM")]
         public void Mp_Map_GoogleMaps() => ShowMapFor("https://www.google.com", "/maps/search/?api=1&query={0},{1}");
@@ -46,6 +46,7 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+
             // Převedení S-JTSK souřadnic do WGS-84
             __4326 wgs84 = GetWGS84FromPoint(point);
             try

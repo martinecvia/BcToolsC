@@ -84,6 +84,37 @@ namespace BcToolsC.BCad.Transactions
             return result;
         }
 
+        public DBPoint AddPoint(double x, double y, double z = 0.0,
+            LAYER? layer = null,
+            COLOR? color = null)
+            => AddPoint(new Point3d(x, y, z), layer, color);
+
+        public DBPoint AddPoint(Point2d point, double z = 0.0,
+            LAYER? layer = null,
+            COLOR? color = null)
+            => AddPoint(new Point3d(point.X, point.Y, z), layer, color);
+
+        public DBPoint AddPoint(Point3d point,
+            LAYER? layer = null,
+            COLOR? color = null)
+        {
+            DBPoint entity = new DBPoint(point);
+            DBPoint result = AddToModelSpace(entity);
+            result.LayerId = EnsureLayer(layer);
+            result.Color = EnsureColor(color);
+            return result;
+        }
+
+        public IEnumerable<Point2d> ConvertToPoint(Point2dCollection vertexes)
+        {
+            if (vertexes == null) yield break;
+            for(int i = 0; i < vertexes.Count; i++)
+            {
+                var p = vertexes[i];
+                yield return new Point2d(p.X, p.Y);
+            }
+        }
+
         private IEnumerable<Point2d> ConvertToPoint(double[,] vertexes)
         {
             if (vertexes == null) yield break;

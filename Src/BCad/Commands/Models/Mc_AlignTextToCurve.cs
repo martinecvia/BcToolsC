@@ -4,10 +4,12 @@ using System; // Keep for .NET 4.6
 #if ZWCAD
 using ZwSoft.ZwCAD.Geometry;
 using ZwSoft.ZwCAD.DatabaseServices;
+using ZwSoft.ZwCAD.GraphicsInterface;
 using ZwSoft.ZwCAD.EditorInput;
 #else
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.GraphicsInterface;
 using Autodesk.AutoCAD.EditorInput;
 #endif
 #endregion
@@ -25,8 +27,9 @@ namespace BcToolsC.BCad.Commands.Models
         private readonly JigPromptPointOptions options;
 
         private Point3d? __point;
-        public double OffsetFactor { get; set; } = 1.0;
-        public ANGLE Rotation { get; set; } = 0.0;
+
+        public double OffsetFactor { get; set; }
+        public ANGLE Rotation { get; set; }
 
         public Mc_AlignTextToCurve(Editor editor, Curve curve, Entity field) : base(field)
         {
@@ -46,21 +49,9 @@ namespace BcToolsC.BCad.Commands.Models
         {
             PromptPointResult evResult = prompts.AcquirePoint(options);
             if (evResult.Status == PromptStatus.Keyword)
+                return SamplerStatus.OK;
+            else if (evResult.Status == PromptStatus.OK)
             {
-                switch (evResult.StringResult)
-                {
-                    case "O":
-                        var o = editor.GetDistance("\nZadej měřítko:");
-                        Console.WriteLine(o?.Value);
-                        break;
-                    case "R":
-                        var r = editor.GetAngle("\nZadej úhel:");
-                        Console.WriteLine(r?.Value);
-                        break;
-                    default:
-                        break;
-                }
-            } else if (evResult.Status == PromptStatus.OK) {
                 if (__point != null && __point.Value.IsEqualTo(evResult.Value))
                     return SamplerStatus.NoChange;
                 __point = evResult.Value;
@@ -73,10 +64,13 @@ namespace BcToolsC.BCad.Commands.Models
         {
             if (__point == null) return false;
             Point3d point = __point.Value;
+            point = point.TransformBy(editor.CurrentUserCoordinateSystem);
             try
             {
-                Point3d closestPoint = curve.GetClosestPointTo(point, false);
-                Vector3d t = curve.GetFirstDerivative(closestPoint).GetNormal();
+                var closestPoint = curve.GetClosestPointTo(point, false);
+                Vector3d derivative = curve.GetFirstDerivative(closestPoint);
+                if (derivative.IsZeroLength()) return false;
+                Vector3d t = derivative.GetNormal();
                 ANGLE angle = t.AngleOnPlane(new Plane(Point3d.Origin, Vector3d.ZAxis));
                 angle += Rotation;
                 var flipped = false;
@@ -89,39 +83,34 @@ namespace BcToolsC.BCad.Commands.Models
                 Vector3d cursorDirection = point - closestPoint;
                 int side = cursorDirection.DotProduct(n) >= 0 ? 1 : -1;
                 Vector3d offsetDirection = n * side;
+                var h = (field is DBText dt) ? dt.Height : ((MText)field).TextHeight;
+                var p = closestPoint + (offsetDirection * (OffsetFactor * h));
+
                 // Určení zarovnání (Justification)
                 bool shouldUseBottom = side == 1;
                 if (flipped) shouldUseBottom = !shouldUseBottom;
-                TryChangeField(closestPoint, offsetDirection, shouldUseBottom, angle);
-                return true;
-            } catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); }
-            return false;
-        }
 
-        private void TryChangeField(Point3d point, Vector3d offset, bool justify,
-            ANGLE a)
-        {
-            double h;
-            Point3d p;
-            AttachmentPoint pA = justify
+                // Zobrazení
+                AttachmentPoint pA = shouldUseBottom
                 ? AttachmentPoint.BottomCenter
                 : AttachmentPoint.TopCenter;
-            if (field is DBText dText)
-            {
-                h = dText.Height;
-                p = point + (offset * (OffsetFactor * h));
-                dText.Position = p;
-                dText.Justify = pA;
-                dText.AlignmentPoint = p;
-                dText.Rotation = a;
-            } else if (field is MText mText) {
-                h = mText.TextHeight;
-                p = point + (offset * (OffsetFactor * h));
-                mText.Location = p;
-                mText.Attachment = pA;
-                mText.Rotation = a;
-            }
+                if (field is DBText dText)
+                {
+                    dText.Justify = pA;
+                    if (pA == AttachmentPoint.BaseLeft)
+                        dText.Position = p;
+                    else
+                        dText.AlignmentPoint = p;
+                    dText.Rotation = angle;
+                }
+                else if (field is MText mText)
+                {
+                    mText.Location = p;
+                    mText.Attachment = pA;
+                    mText.Rotation = angle;
+                }
+                return true;
+            } catch { return false; }
         }
     }
 }

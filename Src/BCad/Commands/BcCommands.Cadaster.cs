@@ -26,9 +26,8 @@ using Autodesk.AutoCAD.EditorInput;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
-#if !NET45
-using NetTopologySuite.Geometries;
-#endif
+using System.Windows;
+using System.Net;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -54,9 +53,8 @@ namespace BcToolsC.BCad.Commands
                 Id = id;
                 Kuid = kuid;
             }
-#if !NET45
-            public LinearRing Geometry { get; set; }
-#endif
+
+            public Point2dCollection Geometry { get; set; }
             public Point2d Point { get; set; }
             public double Area { get; set; }
             public string Name { get; set; }
@@ -118,7 +116,7 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Rozbalení a vložení do výkresu
-            if (!TryUnzipData(data, dir, out string anyFile))
+            if (!TryUnzipData(data, dir, ".dgn", out string anyFile))
             {
                 editor.Error("Chyba; Nepovedlo se uložit soubor.");
                 return;
@@ -136,8 +134,8 @@ namespace BcToolsC.BCad.Commands
                           "0\n", true, false, false);
         }
 
-        [AcRun.CommandMethod("BCTOOLSC_KN_AN")]
-        public void Kn_ExportParcels()
+        [AcRun.CommandMethod("BCTOOLSC_KN_IN")]
+        public void Kn_InfoAboutParcel()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
@@ -145,7 +143,6 @@ namespace BcToolsC.BCad.Commands
             Editor editor = document.Editor;
 
             if (!ValidateModelSpace(editor, db)) return;
-            if (!ValidateAppVersion(editor)) editor.Warn("Některé funkce můžou být nekompletní.");
 
             // Získání vstupu od uživatele
             var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
@@ -156,26 +153,6 @@ namespace BcToolsC.BCad.Commands
             }
             if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
             var wgs84 = GetWGS84FromPoint(point);
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
-            typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
-            if (__curve == ObjectId.Null)
-            {
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
-            }
-            
-            var __cdata = GetCurve(__curve);
-            if (__cdata == null)
-            {
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
-            }
-            var curve = __cdata.Value;
-            if (curve.Vertices.Count < 2)
-            {
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
-            }
 
             // Stažení dat ze serveru ČÚZK
             AtomicEntries response = null;
@@ -208,72 +185,65 @@ namespace BcToolsC.BCad.Commands
                 editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                 return;
             }
-#if !NET45
-            // Vytvoření řezací křivky
-            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
-            Coordinate[] vertices = new Coordinate[curve.Vertices.Count];
-            for (int i = 0; i < curve.Vertices.Count; i++)
-            {
-                var v = curve.Vertices[i];
-                // Ignorujeme Z souřadnici křivky, protože ji nemáme jak porovnat
-                vertices[i] = new Coordinate(v.X, v.Y);
-            }
-            if (!vertices[0].Equals2D(vertices[curve.Vertices.Count - 1]))
-            {
-                editor.Warn("Nebyla nalezena uzavřená křivka pro tuto operaci.");
-                return;
-            }
-            var polyline = factory.CreatePolygon(vertices);
-#endif
-            var parcels = Kn_CollectParcels(data
-#if !NET45
-                , factory
-#endif
-                );
-            /*
-            int q = parcels.Count;
-            if (q == 0)
+            var parcels = Kn_CollectParcels(data);
+            int n = parcels.Count;
+            if (n == 0)
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
             }
-            long r = q / 100L;
-            if (r == 0) r = 1;
-            using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
+
+            // Kontrola jestli jsme vevnitř
+            AcParcel parcel = null;
+            for (int i = 0; i < n; i++)
             {
-                progress.SetLimit(100);
-                progress.Start("Hledám průsečníky ...");
-                int l = 0;
-                for (int i = 0; i < q; i++)
+                var p = parcels[i];
+                if (IsPointInPolygon(point, p.Geometry))
                 {
-                    var p = parcels[i];
-                    if (p.Geometry == null) continue;
-                    if (i % n == 0 && l < 100)
-                    {
-                        progress.MeterProgress();
-                        l++;
-                    }
-                    try
-                    {
-                        if (!GetIntersectionArea(p.Geometry, polyline, out Geometry intersection, out double area)) continue;
-                        if (intersection != null && intersection.Coordinates.Length > 2)
-                            Call(t => t.AddLWPolyline(p.Geometry.Coordinates.Select(c => new Point2d(c.X, c.Y)), color: 1));
-                        else
-                            Call(t => t.AddLWPolyline(p.Geometry.Coordinates.Select(c => new Point2d(c.X, c.Y)), color: 5));
-                    }
-                    catch (Exception exception)
-                    { Console.WriteLine(exception.Message); }
+                    parcel = p;
+                    break;
                 }
-                progress.Stop();
             }
-            */
+            if (parcel == null)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+            string html = DownloadString("https://vdp.cuzk.gov.cz/vdp/ruian/parcely/" + parcel.Id);
+            string obec = ExtractValue(html, "Obec:");
+            string katUzemi = ExtractValue(html, "Katastrální území:");
+            string druhPozemku = ExtractValue(html, "Druh pozemku:");
+            string bpej = ExtractValue(html, "BPEJ");
+            Call(t => t.AddLWPolyline(t.ConvertToPoint(parcel.Geometry), color: 1));
+            MessageBox.Show(
+                $"Obec: {obec}\n" +
+                $"Katastrální území: {katUzemi}\n" +
+                $"Kmenové číslo / poddělení: {parcel.Name}\n" +
+                $"Výměra parcely [m2]: {parcel.Area}\n" +
+                $"Druh pozemku: {druhPozemku}\n" +
+                $"BPEJ: \n{bpej}",
+                $"Parcela: {parcel.Id}",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
         }
 
-        static List<AcParcel> Kn_CollectParcels(byte[] data
-#if !NET45
-            , GeometryFactory factory
-#endif
-            )
+        string ExtractValue(string html, string label)
+        {
+            int labelIdx = html.IndexOf(label, StringComparison.OrdinalIgnoreCase);
+            if (labelIdx == -1) return "-";
+            int tdStartIdx = html.IndexOf("<td", labelIdx, StringComparison.OrdinalIgnoreCase);
+            if (tdStartIdx == -1) return "-";
+            int tdEndIdx = html.IndexOf("</td>", tdStartIdx, StringComparison.OrdinalIgnoreCase);
+            if (tdEndIdx == -1) return "-";
+            string content = html.Substring(tdStartIdx, tdEndIdx - tdStartIdx);
+            content = Regex.Replace(content, "<.*?>", string.Empty);
+            content = WebUtility.HtmlDecode(content);
+            content = Regex.Replace(content, @"\s+", " ").Trim();
+            return content;
+        }
+
+        static List<AcParcel> Kn_CollectParcels(byte[] data)
         {
             List<AcParcel> result = new List<AcParcel>();
             if (data == null || data.Length == 0)
@@ -299,7 +269,7 @@ namespace BcToolsC.BCad.Commands
                                             reader.Name == "cp:CadastralParcel")
                             {
                                 AcParcel parcel = new AcParcel(
-                                    reader.GetAttribute("id", "http://www.opengis.net/gml/3.2"),
+                                    reader.GetAttribute("id", "http://www.opengis.net/gml/3.2").Substring(3),
                                     zipEntry.Name
                                     // Odstranění pozůstatkového .xml
                                     .Substring(0, zipEntry.Name.Length - 4)
@@ -326,7 +296,6 @@ namespace BcToolsC.BCad.Commands
                                                 double.Parse(posList[0], CultureInfo.InvariantCulture),
                                                 double.Parse(posList[1], CultureInfo.InvariantCulture));
                                         }
-#if !NET45
                                         else if (reader.LocalName == "posList")
                                         {
                                             string pos = reader.ReadElementContentAsString();
@@ -341,24 +310,17 @@ namespace BcToolsC.BCad.Commands
                                                 Console.WriteLine($"Debug; Parcela nemá sudý počet souřadnic.");
                                                 continue;
                                             }
-                                            Coordinate[] coord = new Coordinate[n / 2];
+                                            Point2dCollection geometry = new Point2dCollection();
                                             int j = 0;
                                             for (int i = 0; i + 1 < posList.Length; i += 2)
                                             {
-                                                coord[j] = new Coordinate(
+                                                geometry.Add(new Point2d(
                                                     double.Parse(posList[i], CultureInfo.InvariantCulture),
-                                                    double.Parse(posList[i + 1], CultureInfo.InvariantCulture));
+                                                    double.Parse(posList[i + 1], CultureInfo.InvariantCulture)));
                                                 j++;
-                                            }
-                                            LinearRing geometry = factory.CreateLinearRing(coord);
-                                            if (!geometry.IsValid)
-                                            {
-                                                Console.WriteLine($"Debug; Parcela nemá validní geometrii.");
-                                                continue;
                                             }
                                             parcel.Geometry = geometry;
                                         }
-#endif
                                     }
                                 }
                                 if (parcel.Area != 0)
@@ -428,7 +390,7 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Rozbalení a vložení do výkresu
-            if (!TryUnzipData(data, dir, out string anyFile))
+            if (!TryUnzipData(data, dir, ".dxf", out string anyFile))
             {
                 editor.Error("Chyba; Nepovedlo se uložit soubor.");
                 return;
@@ -527,7 +489,9 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Rozbalení a vložení do výkresu
-            if (!TryUnzipData(data, dialog.ResultPath, out string _))
+            if (!TryUnzipData(data, dialog.ResultPath, 
+                // Není potřeba
+                string.Empty, out string _))
             {
                 editor.Error("Chyba; Nepovedlo se uložit soubor.");
                 return;

@@ -2,11 +2,14 @@
 using System; // Keep for .NET 4.6
 using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
+using System.Linq; // Keep for .NET 4.6
 using System.Text;
 using System.Runtime.Serialization.Json;
 using System.Net;
 using System.IO.Compression;
 using System.Runtime.Serialization;
+using System.Windows;
+using System.Text.RegularExpressions;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -24,13 +27,14 @@ using Autodesk.AutoCAD.Geometry;
 
 using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
+using static BcToolsC.Helpers.CompressHelper;
 using BcToolsC.BCad.Transactions;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using System.Globalization;
+
 #if !NET45
 using NetTopologySuite.Geometries;
 #endif
-using System.Windows;
-using System.Text.RegularExpressions;
-using System.Linq;
 
 [assembly: AcRun.CommandClass(typeof(BcToolsC.BCad.Commands.BcCommands))]
 namespace BcToolsC.BCad.Commands
@@ -51,6 +55,8 @@ namespace BcToolsC.BCad.Commands
                 public string Link { get; set; }
                 [DataMember(Name = "title", IsRequired = true)]
                 public string Name { get; set; }
+                [DataMember(Name = "length", IsRequired = true)]
+                public int Length { get; set; }
             }
         }
 
@@ -107,6 +113,33 @@ namespace BcToolsC.BCad.Commands
         }
 #endif
 
+        public bool IsPointInPolygon(Point3d point, Point2dCollection polygon)
+        {
+            double minX = polygon[0].X;
+            double maxX = polygon[0].X;
+            double minY = polygon[0].Y;
+            double maxY = polygon[0].Y;
+            for (int i = 1; i < polygon.Count; i++)
+            {
+                Point2d q = polygon[i];
+                minX = Math.Min(q.X, minX);
+                maxX = Math.Max(q.X, maxX);
+                minY = Math.Min(q.Y, minY);
+                maxY = Math.Max(q.Y, maxY);
+            }
+
+            if (point.X < minX || point.X > maxX || point.Y < minY || point.Y > maxY) return false;
+            // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+            bool inside = false;
+            for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
+            {
+                if ((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y) &&
+                     point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X)
+                    inside = !inside;
+            }
+            return inside;
+        }
+
         static Point3dCollection GetPolylineVertices(BCadTransaction t, Curve curve)
         {
             Point3dCollection result = new Point3dCollection();
@@ -127,9 +160,28 @@ namespace BcToolsC.BCad.Commands
             // Polyline
             else if (curve is Polyline polyLw)
             {
-                for (int i = 0; i < polyLw.NumberOfVertices; i++)
-                    result.Add(polyLw.GetPoint3dAt(i));
+                int n = polyLw.NumberOfVertices;
+                for (int i = 0; i < n; i++)
+                {
+                    var p = polyLw.GetPoint3dAt(i);
+                    result.Add(p);
+                    int j = (i + 1) % n;
+                    if (!polyLw.Closed && i == n - 1) break;
+                    double bulge = polyLw.GetBulgeAt(i);
+                    if (Math.Abs(bulge) > 1E-5)
+                    {
+                        Point3d pB = polyLw.GetPoint3dAt(j);
+                        ArcToVertices(result, BulgeToArc(p, pB, bulge));
+                    }
+                }
             }
+            // Arc
+            else if (curve is Arc arc)
+                ArcToVertices(result, arc);
+            // Circle
+            else if (curve is Circle circle)
+                ArcToVertices(result, new Arc(
+                    circle.Center, circle.Radius, 0, Math.PI * 2.0));
             // Legacy polyline, ale může se objevit ještě v některých starších výkresech
             else if (curve is Polyline2d poly2d)
             {
@@ -161,6 +213,79 @@ namespace BcToolsC.BCad.Commands
             return result;
         }
 
+        static Arc BulgeToArc(Point3d a, Point3d b, 
+            double bulge)
+        {
+            // Výpočet geometrie oblouku z prohnutí (bulge)
+            ANGLE angle = ANGLE.FromBulge(bulge);
+            double length = a.DistanceTo(b);
+            double radius = (length / 2.0) / Math.Sin(angle / 2.0);
+
+            // Střed tětivy 
+            var pM = a + (b - a) * 0.5;
+
+            // Kolmice k tětivě (směr ke středu oblouku)
+            var cH = b - a;
+            var pE = cH.RotateBy(Math.PI / 2.0, Vector3d.ZAxis).GetNormal();
+            var pS = (length / 2.0) / Math.Tan(angle / 2.0);
+
+            // Výpočet úhlů
+            Point3d center = (bulge > 0) ? pM + pE * pS : pM - pE * pS;
+            Vector3d vS = a - center;
+            Vector3d vE = b - center;
+
+            double startAng = Math.Atan2(vS.Y, vS.X);
+            double endAng   = Math.Atan2(vE.Y, vE.X);
+
+            // V AutoCADu musí jít Arc vždy proti směru hodin (CCW) (counter-clockwise)
+            if (bulge < 0)
+                return new Arc(center, radius, 
+                    endAng, startAng);
+            return new Arc(center, radius, 
+                    startAng, endAng);
+        }
+
+        static void ArcToVertices(Point3dCollection _vertices, Arc arc)
+        {
+            double length = arc.Length;
+            if (length < 1E-5) return;
+
+            // Dynamický počet segmentů
+            int segments = (int)Math.Max(2, length / 0.5);
+            double startAng = arc.StartAngle;
+            double endAng = arc.EndAngle;
+            if (endAng < startAng) endAng += Math.PI * 2.0;
+
+            double step = (endAng - startAng) / segments;
+            for (int i = 1; i < segments; i++)
+            {
+                ANGLE angle = startAng + (i * step);
+                _vertices.Add(arc.GetPointAtParameter(angle));
+            }
+        }
+
+        static double ReadDouble(string s)
+        {
+            // Soubory používají jak , tak . jako desetinnou čárku
+            // pokud by jsme neprováděli konverzi,
+            // může se stát že se bude brát pouze číslo za des. čárkou (což je blbost)
+            if (double.TryParse(s.Trim().Replace(',', '.'), out double result)) return result;
+            return 0.0;
+        }
+
+        static long CountLines(string lsFile)
+        {
+            long result = 0;
+            try
+            {
+                using (var reader = new StreamReader(lsFile))
+                while (reader.ReadLine() != null)
+                    result++;
+            }
+            catch (Exception exception) { }
+            return result;
+        }
+ 
         static T Deserialize<T>(string json)
         {
             using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(json)))
@@ -208,11 +333,11 @@ namespace BcToolsC.BCad.Commands
                                         for (int i = 0; i < curr - last; i++)
                                             progress.MeterProgress();
                                         last = curr;
+#pragma warning disable CA1416 // Validate platform compatibility
+                                        System.Windows.Forms.Application.DoEvents();
+#pragma warning restore CA1416 // Validate platform compatibility
                                     }
                                 }
-#pragma warning disable CA1416 // Validate platform compatibility
-                                System.Windows.Forms.Application.DoEvents();
-#pragma warning restore CA1416 // Validate platform compatibility
                             }
                             progress.Stop();
                             return ms.ToArray();
@@ -229,7 +354,7 @@ namespace BcToolsC.BCad.Commands
 
         static string DownloadString(string url, double timeout = 5.0)
         {
-            using (TimeoutedWebClient wc = new TimeoutedWebClient { Timeout = (int)timeout * 1000 })
+            using (TimeoutedWebClient wc = new TimeoutedWebClient { Timeout = (int)timeout * 1000, Encoding = Encoding.UTF8 })
             {
                 wc.Headers[HttpRequestHeader.UserAgent] =
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
@@ -237,7 +362,8 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        static bool TryUnzipData(byte[] data, string dir, out string anyFile)
+        static bool TryUnzipData(byte[] data, string dir, string prefferedExtension,
+            out string anyFile)
         {
             anyFile = default;
             if (data == null || data.Length == 0)
@@ -248,6 +374,14 @@ namespace BcToolsC.BCad.Commands
                 using (var archive = new ZipArchive(ms, ZipArchiveMode.Read))
                 {
                     bool? overwriteAll = null;
+                    
+                    // Získání reálné cesty k souboru s preferovanou přípnou
+                    if (!string.IsNullOrEmpty(prefferedExtension))
+                    {
+                        var entry = archive.Entries.FirstOrDefault(e => !string.IsNullOrEmpty(e.Name) &&
+                            string.Equals(Path.GetExtension(e.Name), prefferedExtension, StringComparison.OrdinalIgnoreCase));
+                        if (entry != null) anyFile = Path.Combine(dir, entry.Name);
+                    }
                     foreach (var zipEntry in archive.Entries)
                     {
                         if (string.IsNullOrEmpty(zipEntry.Name)) continue; // Directory
@@ -272,8 +406,8 @@ namespace BcToolsC.BCad.Commands
                         using (var entryStream = zipEntry.Open())
                         using (var filesStream = File.Create(zipPath))
                         {
-                            anyFile = zipPath;
                             entryStream.CopyTo(filesStream);
+                            if (string.IsNullOrEmpty(anyFile)) anyFile = zipPath;
                         }
                     }
                 }
@@ -455,6 +589,56 @@ namespace BcToolsC.BCad.Commands
             return result == MessageBoxResult.Yes;
         }
 
+        static bool ValidateLastoolInstall(Editor editor, out string exePath)
+        {
+            exePath = default;
+            if (!Environment.Is64BitOperatingSystem)
+            {
+                editor.Error("Chyba; 64-bit operační systém je vyžadován k této operaci.");
+                return false;
+            }
+            string tempDir = Path.GetTempPath();
+            if (!ValidateDirectoryWritable(editor, tempDir)) return false;
+            exePath = Path.Combine(tempDir, "las2txt.exe");
+            if (File.Exists(exePath)) return true;
+            MessageBoxResult result = MessageBox.Show(
+                "Nástroj „las2txt.exe“ není na tomto počítači nalezen.\n\n" +
+                "Součást balíku LAStools:\n" +
+                "https://github.com/LAStools/LAStools\n" +
+                "(c) 2007–2024 rapidlasso GmbH\n\n" +
+                "Přejete si jej nyní nainstalovat do dočasného adresáře?",
+                "Chybí nástroj LAStools",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question,
+                MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return false;
+            }
+            // Deserialize embedded EXE
+            byte[] exeData;
+            try
+            {
+                exeData = DeserializeExeFromBase64(Repository.COMPILE_LASTOOL_HASH,
+                    Repository.COMPILE_LASTOOL0, Repository.COMPILE_LASTOOL1,
+                    Repository.COMPILE_LASTOOL2, Repository.COMPILE_LASTOOL3,
+                    Repository.COMPILE_LASTOOL4, Repository.COMPILE_LASTOOL5,
+                    Repository.COMPILE_LASTOOL6, Repository.COMPILE_LASTOOL7,
+                    Repository.COMPILE_LASTOOL8);
+                if (exeData == null || exeData.Length == 0)
+                {
+                    editor.Error("Chyba; Poškození paměti: Data nástroje jsou poškozena (nesouhlasí kontrolní součet).");
+                    return false; 
+                }
+            } catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); return false; }
+            try { File.WriteAllBytes(exePath, exeData); }
+            catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); }
+            return File.Exists(exePath);
+        }
+
         static bool ValidateAppVersion(Editor editor)
         {
             var limited = BcApp.IsAppLimitedByNetVersion;
@@ -484,6 +668,22 @@ namespace BcToolsC.BCad.Commands
             if (inside) return true;
             editor.Warn("Bod leží mimo reliéf.");
             return false;
+        }
+
+        static bool InsideRelief(double x, double y,
+            out double rX, out double rY)
+        {
+            rX = -Math.Abs(x); rY = -Math.Abs(y);
+            if (rX < rY)
+            {
+                double tmp = rX;
+                rX = rY;
+                rY = tmp;
+            }
+            var envelope = BcApp.Envelope;
+            var min = envelope.MinPoint;
+            var max = envelope.MaxPoint;
+            return rX > min.X && rX < max.X && rY > min.Y && rY < max.Y;
         }
 
         static bool ValidateDrawingPath(Editor editor, 

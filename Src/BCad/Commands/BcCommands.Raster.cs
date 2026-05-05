@@ -22,6 +22,7 @@ using Autodesk.AutoCAD.EditorInput;
 #endregion
 
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+using static BcToolsC.Helpers.KrovakHelper;
 using BcToolsC.BCad.Transactions;
 
 namespace BcToolsC.BCad.Commands
@@ -38,7 +39,91 @@ namespace BcToolsC.BCad.Commands
             { "250000", "ZTM250-SJTSK-TIFF" },
         };
 
-        [AcRun.CommandMethod("BCTOOLSC_TF_DW")]
+        [AcRun.CommandMethod("BCTOOLSC_OR_AT")]
+        public void Tf_DownloadOrto()
+        {
+            if (!BcApp.IsAppProperlyInitialized) return;
+            AcApp.Document document = BcApp.Document;
+            if (document == null) return;
+            Database db = document.Database;
+            Editor editor = document.Editor;
+
+            if (!ValidateModelSpace(editor, db)) return;
+            if (!ValidateDrawingPath(editor, out string dir)) return;
+            if (!ValidateDirectoryWritable(editor, dir)) return;
+
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
+            __4326 wgs84 = GetWGS84FromPoint(point);
+
+            // Stažení dat ze serveru ČÚZK
+            AtomicEntries response = null;
+            try
+            {
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+                    "ORTOFOTO", wgs84.L, wgs84.B);
+                Console.WriteLine(url);
+                string json = DownloadString(url);
+                if (string.IsNullOrWhiteSpace(json))
+                    throw new Exception("Prázdná odpověď serveru.");
+                response = Deserialize<AtomicEntries>(json);
+            }
+            catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); return; }
+            if (response?.Entries == null || response.Entries.Count == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+
+            // Výběr konkrétního mapového listu
+            if (!TrySelectEntry(editor, response, "mapový list: ", out AtomicEntries.Entry entry))
+                return;
+
+            // Stažení dat
+            byte[] data = DownloadDataWithProgress(entry.Link);
+            if (data == null || data.Length == 0)
+            {
+                editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                return;
+            }
+
+            // Rozbalení a vložení do výkresu
+            if (!TryUnzipData(data, dir, ".jpg", out string anyFile))
+            {
+                editor.Error("Chyba; Nepovedlo se uložit soubor.");
+                return;
+            }
+
+            // Změna cest, soubory můžou mít jiné jméno souborů než je název archivu
+            string jgwPath = Path.ChangeExtension(anyFile, ".jgw");
+            string jpgPath = Path.ChangeExtension(anyFile, ".jpg");
+            try
+            {
+                // Načtení a přečtení dat ze souboru JGW
+                string[] jgwData = File.ReadAllLines(jgwPath);
+                if (jgwData.Length < 6)
+                {
+                    editor.Error("Chyba; Souborová struktura není validní.");
+                    return;
+                }
+                double[] jgw = ParseJgwData(jgwData);
+                Call(t => ProcessRasterImage(t, editor, dir, jpgPath, new CoordinateSystem3d(
+                    new Point3d(jgw[4], jgw[5] + jgw[3], 0),
+                    new Vector3d(jgw[0], +jgw[2], 0),
+                    new Vector3d(jgw[1], -jgw[3], 0))));
+            }
+            catch (Exception exception)
+            { editor.Error("Chyba; " + exception.Message); }
+        }
+
+        [AcRun.CommandMethod("BCTOOLSC_TF_AT")]
         public void Tf_DownloadTiff()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
@@ -50,6 +135,7 @@ namespace BcToolsC.BCad.Commands
             if (!ValidateModelSpace(editor, db)) return;
             if (!ValidateDrawingPath(editor, out string dir)) return;
             if (!ValidateDirectoryWritable(editor, dir)) return;
+
             // Získání vstupu od uživatele
             var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
             if (__point == null)
@@ -98,7 +184,7 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Rozbalení a vložení do výkresu
-            if (!TryUnzipData(data, dir, out string anyFile))
+            if (!TryUnzipData(data, dir, ".tfw", out string anyFile))
             {
                 editor.Error("Chyba; Nepovedlo se uložit soubor.");
                 return;
@@ -165,26 +251,32 @@ namespace BcToolsC.BCad.Commands
             });
         }
 
+        // https://iric-gui-user-manual.readthedocs.io/en/latest/06/09_georef.html
         private double[] ParseTfwData(string[] tfwData)
         {
             return new[]
             {
-                ReadDouble(tfwData[0]) * 10_000,         // pX
+                ReadDouble(tfwData[0]) * 10_000,         // increment X per pixel
                 ReadDouble(tfwData[1]),                  // yaw
                 ReadDouble(tfwData[2]),                  // pitch
-                ReadDouble(tfwData[3]) * 10_000 * 0.8,   // pY
+                ReadDouble(tfwData[3]) * 10_000 * 0.8,   // increment Y per pixel
                 ReadDouble(tfwData[4]),                  // X
                 ReadDouble(tfwData[5]),                  // Y
             };
         }
 
-        private static double ReadDouble(string s)
+        // https://iric-gui-user-manual.readthedocs.io/en/latest/06/09_georef.html
+        private double[] ParseJgwData(string[] jgwData)
         {
-            // Soubory používají jak , tak . jako desetinnou čárku
-            // pokud by jsme neprováděli konverzi,
-            // může se stát že se bude brát pouze číslo za des. čárkou (což je blbost)
-            return double.Parse(s.Trim().Replace(',', '.'),
-                    CultureInfo.InvariantCulture);
+            return new[]
+            {
+                ReadDouble(jgwData[0]) * 10_000 * 2.0,   // increment X per pixel
+                ReadDouble(jgwData[1]),                  // yaw
+                ReadDouble(jgwData[2]),                  // pitch
+                ReadDouble(jgwData[3]) * 10_000 * 0.8 * 2.0,
+                ReadDouble(jgwData[4]),                  // X
+                ReadDouble(jgwData[5]),                  // Y
+            };
         }
 
         private void ProcessRasterImage(BCadTransaction t, Editor editor,

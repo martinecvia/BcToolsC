@@ -122,7 +122,7 @@ namespace BcToolsC.BCad
                 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
                 AcRb.Builder hBuilder = new AcRb.Builder()
                     .SetDefaultHandler(typeof(BcAppRibbonCommandH))
-                    .RegisterControlsType<RibbonLayerHighlight>("TargetsFor@.Highlight");
+                    .RegisterControlsType<RibbonLayerHighlight>("TargetsFor@.HighlightMode");
 #if NET45
                 hBuilder.RegisterControlsType<BcToolsC.Compatibility.Net45_RibbonLayerSpecial>("SpecialFor@.NETFramework4.5");
                 hBuilder.RegisterControlsType<BcToolsC.Compatibility.Net45_RibbonLayerLimited>("LimitedFor@.NETFramework4.5");
@@ -171,27 +171,10 @@ namespace BcToolsC.BCad
                     }
                 }
                 var vertice = CompressHelper.DeserializeDblFromBase64(Repository.COMPILE_RELIEFCZ);
-                // Části exe které následně převedeme do byte[],
-                // pouze však pokud to uživatel povolí
-                var lastool = CompressHelper.DeserializeExeFromBase64(Repository.COMPILE_LASTOOL_HASH,
-                    Repository.COMPILE_LASTOOL0, Repository.COMPILE_LASTOOL1, 
-                    Repository.COMPILE_LASTOOL2, Repository.COMPILE_LASTOOL3,
-                    Repository.COMPILE_LASTOOL4, Repository.COMPILE_LASTOOL5,
-                    Repository.COMPILE_LASTOOL6, Repository.COMPILE_LASTOOL7,
-                    Repository.COMPILE_LASTOOL8);
-                int rows = vertice.GetLength(0);
-                double minX = .0, maxX = .0;
-                double minY = .0, maxY = .0;
-                for (int i = 0; i < rows; i++)
-                {
-                    double x = vertice[i, 0];
-                    double y = vertice[i, 1];
-                    if (x < minX) minX = x;
-                    if (y < minY) minY = y;
-                    if (x > maxX) maxX = x;
-                    if (y > maxY) maxY = y;
-                }
-                Envelope = new AcDb.Extents2d(new Point2d(minX, minY), new Point2d(maxX, maxY));
+                // https://epsg.io/5514
+                Envelope = new AcDb.Extents2d(
+                    new Point2d(-951499.37, -1353292.51), 
+                    new Point2d(-159365.31, -911053.6));
                 BcCommands.Rf_TypeArray_Cz = vertice;
 #if !NET45
                 NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG); 

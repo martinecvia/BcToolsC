@@ -27,6 +27,13 @@ namespace BcToolsC.Models
         public static ANGLE FromRadians(double radians) => new ANGLE(radians);
 
         /// <summary>
+        /// Vytvoří hodnotu type <see cref="ANGLE"/> zprohnutí
+        /// </summary>
+        /// <param name="bulge">Hodnota prohnutí, které se má převést.</param>
+        /// <returns><see cref="ANGLE"/> reprezentující úhel v radiánech.</returns>
+        public static ANGLE FromBulge(double bulge) => new ANGLE(4.0 * System.Math.Atan(bulge));
+
+        /// <summary>
         /// Vytvoří hodnotu type <see cref="ANGLE"/> ze sklonu v %
         /// </summary>
         /// <param name="slope">Sklon ve stupních, který se má převést.</param>
