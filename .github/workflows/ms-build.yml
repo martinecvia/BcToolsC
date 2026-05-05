@@ -19,9 +19,13 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Install .NET Framework 4.5(.2) Developer Pack
+    - name: Install .NET Framework 4.5 Developer Pack
+      shell: pwsh
       run: |
-        choco install netfx-4.5.2-devpack -y --no-progress
+        Invoke-WebRequest -Uri 'https://www.nuget.org/api/v2/package/Microsoft.NETFramework.ReferenceAssemblies.net45/1.0.3' -OutFile "${env:temp}\netfx-4.5-devpack.zip"
+        Expand-Archive -Force -LiteralPath "${env:temp}\netfx-4.5-devpack.zip" -DestinationPath "${env:temp}\netfx-4.5-devpack"
+        [IO.Directory]::Delete('C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5', $True)
+        Move-Item -Force -LiteralPath "${env:temp}\netfx-4.5-devpack\build\.NETFramework\v4.5" -Destination 'C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework'
 
     - name: Install .NET Framework 4.7 Developer Pack
       run: |
@@ -33,7 +37,7 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
       
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1
