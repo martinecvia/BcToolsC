@@ -19,9 +19,9 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Install .NET Framework 4.5 Developer Pack
+    - name: Install .NET Framework 4.5(.2) Developer Pack
       run: |
-        choco install netfx-4.5-devpack -y --no-progress
+        choco install netfx-4.5.2-devpack -y --no-progress
 
     - name: Install .NET Framework 4.7 Developer Pack
       run: |
