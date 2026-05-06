@@ -5,7 +5,7 @@ REM ================== PATHS ==================
 set ROOT=C:\Users\coplak\source\repos\martinecvia\BcToolsC
 set TOOLSDIR=%ROOT%\packages\ILRepack.2.0.44\tools
 set BUILDDIR=%ROOT%\BuildsTargets\BcToolsZC25
-set OUTPUTDIR=%BUILDDIR%\bin\Debug
+set OUTPUTDIR=%BUILDDIR%\bin\Release
 set LIBDIR=%ROOT%\CadReferences\ZCAD2564
 
 set ILREPACK=%TOOLSDIR%\ILRepack.exe

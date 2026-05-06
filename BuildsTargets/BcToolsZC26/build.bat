@@ -5,7 +5,7 @@ REM ================== PATHS ==================
 set ROOT=C:\Users\coplak\source\repos\martinecvia\BcToolsC
 set TOOLSDIR=%ROOT%\packages\ILRepack.2.0.44\tools
 set BUILDDIR=%ROOT%\BuildsTargets\BcToolsZC26
-set OUTPUTDIR=%BUILDDIR%\bin\Debug
+set OUTPUTDIR=%BUILDDIR%\bin\Release
 set LIBDIR=%ROOT%\CadReferences\ZCAD2664
 
 set ILREPACK=%TOOLSDIR%\ILRepack.exe
@@ -22,7 +22,7 @@ set DEP3=%OUTPUTDIR%\System.Numerics.Vectors.dll
 set DEP4=%OUTPUTDIR%\System.Runtime.CompilerServices.Unsafe.dll
 
 REM ================== START ==================
-echo === Listing Debug directory ===
+echo === Listing Release directory ===
 dir "%OUTPUTDIR%"
 
 echo.
