@@ -46,7 +46,6 @@ using BcToolsC.Helpers;
 #if !NET45
 using NetTopologySuite;
 #endif
-using BcToolsC.BCad.Inspector;
 
 // RibbonXml
 using AcRb = RibbonXml;
@@ -103,8 +102,6 @@ namespace BcToolsC.BCad
         public static bool IsAppLimitedByNetVersion { get; private set; }
         public static AcDb.Extents2d Envelope { get; private set; }
         public static AcRb.RibbonXml Ribbons { get; private set; }
-        static BcAppInspector defaultInspector; // Default
-        static BcAppInspector generalInspector; // Pro objekty jako takové
 
         public void Initialize()
         {
@@ -179,9 +176,6 @@ namespace BcToolsC.BCad
 #if !NET45
                 NtsGeometryServices.Instance = new NtsGeometryServices(NetTopologySuite.Geometries.GeometryOverlay.NG); 
 #endif
-                defaultInspector = new BcAppInspector("Inspektor", new MenuItem("Entity"), new MenuItem("Database"), new MenuItem("Table"), new MenuItem("Dictionary"));
-                generalInspector = new BcAppInspector("Informace");
-                AcApp.Application.AddDefaultContextMenuExtension(defaultInspector); AcApp.Application.AddObjectContextMenuExtension(Entity, generalInspector);
                 editor.WriteMessage("\n==========================================" +
                 "\n   Návrh a realizace podpůrných nástrojů pro projektanty" +
                 "\n   (c) 2026 Martin Coplák  |  VUT Brno" +
@@ -202,11 +196,7 @@ namespace BcToolsC.BCad
         }
 
         public void Terminate() 
-        {
-            if (defaultInspector != null) AcApp.Application.RemoveDefaultContextMenuExtension(defaultInspector);
-            if (generalInspector != null)
-                AcApp.Application.RemoveObjectContextMenuExtension(Entity, generalInspector);
-        }
+        { }
 
         private RibbonTab _tabWatcher = null;
         private void RegisterRibbon()

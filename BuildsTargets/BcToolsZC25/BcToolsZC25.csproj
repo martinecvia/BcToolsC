@@ -102,7 +102,6 @@
   <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
   <Import Project="..\..\Src\BCad\BCad.projitems" Label="Shared" />
   <Import Project="..\..\Src\Topology\Topology.projitems" Label="Shared" />
-  <Import Project="..\..\Src\BCadObjectInspector\BCadObjectInspector.projitems" Label="Shared" />
   <Import Project="..\..\RibbonXml\Shared\Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
