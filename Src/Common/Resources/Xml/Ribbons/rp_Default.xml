@@ -38,21 +38,17 @@
 				<!-- Ok --><RibbonButton Id="TargetsFor@.HighlightMode" Tag="New" Description="Stáhne data DMR do vybrané složky na základě určeného místa kliknutí." Text="Stažení DMR" ShowText="True" CommandHandler="BCTOOLSC_LZ_DW" LargeImage="rp_laz_download_32" Size="Large" />
 			</RibbonSplitButton>
 			<!-- Ok --><RibbonButton Id="SpecialFor@.NETFramework4.5" Description="Vygeneruje podélný profil z vybrané křivky pomocí 3D ploch (3DFace)." Text="Profil křivky&#13;s 3dFace" ShowText="True" CommandHandler="BCTOOLSC_PR_PROFILE_3DFACE" LargeImage="rp_3dface_32" Size="Large" Orientation="Vertical" />
-			<RibbonButton Id="SpecialFor@.NETFramework4.5" Description="Vygeneruje podélný profil z vybrané křivky s využitím modelu terénu DT4." Text="Profil křivky&#13;s DT4" ShowText="True" CommandHandler="BCTOOLSC_PR_PROFILE_DT4"
-						  LargeImage="rp_dt4_32" Size="Large"
-						  Orientation="Vertical"
-						  IsVisible="False" />
 			<RibbonRowPanel>
 				<!-- Ok --><RibbonButton Text="Profil křivky" Description="Vygeneruje standardní podélný profil z vybrané trasy (křivky)." CommandHandler="BCTOOLSC_PR_PROFILE" Image="rp_profile_16" />
 				<RibbonRowBreak />
-				<RibbonButton Description="Vygeneruje podélný profil z vybrané křivky s využitím 3D těles (Solid)." Text="Profil křivky (SOLID)" CommandHandler="BCTOOLSC_PR_PROFILE_SOLID"
+				<!-- Ok --><RibbonButton Description="Vygeneruje podélný profil z vybrané křivky s využitím 3D těles (Solid)." Text="Profil křivky (SOLID)" CommandHandler="BCTOOLSC_PR_PROFILE_SOLID"
 							  Image="rp_profile_solid_16" />
 				<RibbonRowBreak />
 				<RibbonButton Description="Vytvoří tabulku vytyčovacích bodů z vybrané křivky." Text="Vytyčení křivky" CommandHandler="BCTOOLSC_MC_SV" 
 							  Image="rp_survey_16" />
 			</RibbonRowPanel>
 			<RibbonRowPanel>
-				<RibbonButton Description="Najde a odstraní z výkresu nežádoucí proxy objekty pro optimalizaci velikosti souboru." Text="Smaž proxy objekty" ShowText="True" CommandHandler="BCTOOLSC_MC_RP"
+				<!-- Ok --><RibbonButton Description="Najde a odstraní z výkresu nežádoucí proxy objekty pro optimalizaci velikosti souboru." Text="Smaž proxy objekty" ShowText="True" CommandHandler="BCTOOLSC_MC_RP"
 							  Image="rp_proxy_16" />
 				<RibbonRowBreak />
 				<!-- Ok --><RibbonButton Id="TargetsFor@.HighlightMode" Tag="New" Description="Zarovná a popíše vybranou křivku zadaným textem." Text="Text na křivce" ShowText="True" CommandHandler="BCTOOLSC_MC_AC" Image="rp_curvetext_16" />

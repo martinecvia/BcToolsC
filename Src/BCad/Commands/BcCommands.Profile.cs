@@ -22,10 +22,10 @@ using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+using BcToolsC.BCad.Transactions;
 
 #if !NET45
 using NetTopologySuite.Geometries;
-using BcToolsC.BCad.Commands.Models;
 #endif
 
 namespace BcToolsC.BCad.Commands
@@ -33,9 +33,9 @@ namespace BcToolsC.BCad.Commands
     public partial class BcCommands
     {
         [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_SOLID")]
-        public void Mc_ProfileWithSolid() => BuildProfiler(true);
+        public void Pr_ProfileWithSolid() => BuildProfiler(true);
         [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE")]
-        public void Mc_ProfileEmpty() => BuildProfiler();
+        public void Pr_Profile() => BuildProfiler();
 
         int previousScaleY = 1_000;
         void BuildProfiler(bool promptWithSolid = false)
@@ -45,182 +45,70 @@ namespace BcToolsC.BCad.Commands
             if (document == null) return;
             Database db = document.Database;
             Editor editor = document.Editor;
-            if (!db.TileMode)
+
+            if (!ValidateModelSpace(editor, db)) return;
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
+            typeof(Line), typeof(Polyline), typeof(Polyline2d), typeof(Arc), typeof(Circle), typeof(Spline),
+            typeof(Polyline3d));
+            if (__curve == ObjectId.Null)
             {
-                editor.Warn("Povoleno pouze v modelovém prostoru.");
+                editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-            Matrix3d ucs = editor.CurrentUserCoordinateSystem;
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
-            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
-            if (__curve == ObjectId.Null) goto no_data;
-
-            var __point = GetPointFromPrompt(editor, "Vyberte vkládací bod");
-            if (__point == null) goto user_closed_dialog;
-            var point = __point.Value.TransformBy(ucs);
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            var point = __point.Value.TransformBy(editor.CurrentUserCoordinateSystem);
             var scale = GetScaleFromPrompt(editor, "Zadejte měřítko Y", previousScaleY)
                 ?? new SCALE(1_000, 1_000);
             previousScaleY = (int)scale.Y;
             ObjectId __solid = ObjectId.Null;
             if (promptWithSolid)
             {
-                __solid = GetEntityFromPrompt(editor, "Vyberte 3D těleso (Solid3d)", typeof(Solid3d));
-                if (__solid == ObjectId.Null) goto user_closed_dialog;
+                __solid = GetEntityFromPrompt(editor, "Vyberte 3D těleso (Solid3d)", 
+                typeof(Solid3d));
             }
             Call(t =>
             {
-                if (!t.TryGet(__curve, out Curve curve)) goto local_no_data;
-                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
-                Point3dCollection vertice = GetPolylineVertices(t, curve);
-                if (vertice.Count < 2) goto local_no_data;
-                if (curve.Closed) vertice.Add(vertice[0]);
-
-                var pts = Profiler_CollectVertice(vertice, curve);
-                if (pts.Count < 2) goto local_no_data;
-                var ter = new List<List<Point2d>>();
-                if (t.Exists(__solid) && t.TryGet(__solid, out Solid3d solid))
-                    ter = Profiler_CollectIntersectsWith(vertice, curve, solid);
-
-                List<MText> _mTextBringFront = new List<MText>();
-                double dx = point.X;
-                double dy = point.Y;
+                if (!t.TryGet(__curve, out Curve curve))
+                {
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return;
+                }
                 // Srovnávací rovina
                 double dl;
-                try { dl = curve.GetDistanceAtParameter(curve.EndParam); }
-                catch (Exception) { editor.Error("Chyba; Nepovedlo se získat délku objektu."); return; }
-                t.AddLWPolyline(new[] {
-                    new Point2d(dx, dy),
-                    new Point2d(dx + (2.5 * scale.sY), dy + (2.5 * scale.sY)),
-                    new Point2d(dx - (2.5 * scale.sY), dy + (2.5 * scale.sY))
-                }, shouldBeClosed: true);
-                // Zde chceme získat výšku pro srovnávací rovinu,
-                // o kterou pak opravíme souřadnici Y
-                // --- VÝPOČET SROVNÁVACÍ ROVINY ---
-                double minY = pts.Min(p => p.Y);
-                var pMax = pts.Aggregate((a, b) => a.Y > b.Y ? a : b);
-                if (ter.Count > 0 && ter.Any(list => list.Count > 0))
+                try { dl = curve.GetDistAtPoint(curve.EndPoint); }
+                catch { editor.Error("Chyba; Nepovedlo se získat délku objektu."); return; }
+                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
+                var vertice = GetPolylineVertices(t, curve).ToList();
+                int n = vertice.Count;
+                if (n < 2)
                 {
-                    double minSolidY = ter.SelectMany(list => list).Min(p => p.Y);
-                    minY = Math.Min(minY, minSolidY);
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return;
                 }
-                // Zaokrouhlení dolů na nejbližší desítku
-                double my = Math.Floor(minY / 10.0) * 10.0;
-                _mTextBringFront.Add(t.AddMText($"{my:N3}",
-                new Point2d(dx + (1.0 * scale.sY), dy + (2.5 - .2) * scale.sY),
-                height: 2.5 * scale.sY,
-                vMode: AttachmentPoint.BottomLeft, additional: (m) => {
-                    m.BackgroundFill = true;
-                    m.BackgroundScaleFactor = 1.0;
-                }));
-                t.AddLWPolyline(new Point2d(dx, dy), new Point2d(dx + dl * scale.sX, dy), color: 0);
-
-                // Vykreslení křivky
-                t.AddLWPolyline(pts.Select(p => new Point2d(p.X * scale.sX + dx, (p.Y - my) * scale.sY + dy)), color: 3);
-                foreach (var jmp in ter) if (jmp.Count != 0)
-                    t.AddLWPolyline(jmp.Select(p => new Point2d(p.X * scale.sX + dx, (p.Y - my) * scale.sY + dy)), color: 8);
-                // Vykreslení nejvyššího místa
-                t.AddLWPolyline(new Point2d(pMax.X * scale.sX + dx, dy), new Point2d(pMax.X * scale.sX + dx, (pMax.Y - my) * scale.sY + dy), color: 0);
-                // Posunutí textů nad kresbu
-                foreach (var mtx in _mTextBringFront) t.MoveToTop(mtx);
-                editor.Ok("Ok; Vykresleno v měřítku Y 1:" + scale.Y);
-                return;
-            local_no_data:
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
+                Point3d fst = vertice[0];
+                Point3d lst = vertice[n - 1];
+                bool reallyClosing = fst.IsEqualTo(lst, Tolerance.Global);
+                if (curve.Closed && !reallyClosing) vertice.Add(fst);
+                var pts = CollectVertice(vertice, curve);
+                var ter = new List<List<Point2d>>();
+                if (t.Exists(__solid) && t.TryGet(__solid, out Solid3d solid))
+                    ter = CollectVerticeFromSolid(vertice, curve, solid).ToList();
+                double minY = pts.Select(p => p.Y).Concat(ter.SelectMany(list => list).Select(p => p.Y))
+                    .DefaultIfEmpty(0.0)
+                    .Min();
+                var maxY = pts.OrderByDescending(p => p.Y).FirstOrDefault();
+                DrawProfile(t, editor, pts, ter, minY, maxY, point.X, point.Y, dl, scale);
             });
-            return;
-        no_data:
-            editor.Warn("Nebyla nalazena žádná data.");
-            return;
-        user_closed_dialog:
-            editor.Warn("Výběr byl zrušen uživatelem.");
-            return;
-        }
-
-        List<Point2d> Profiler_CollectVertice(Point3dCollection vertice, Curve curve)
-        {
-            List<Point2d> result = new List<Point2d>();
-            if (vertice.Count == 0) return result;
-            result.Add(new Point2d(0.0, curve.StartPoint.Z));
-            if (curve is Line line)
-            {
-                result.Add(new Point2d(line.Length, curve.EndPoint.Z));
-                return result;
-            }
-            double previous = 0.0;
-            for (int i = 1; i < vertice.Count; i++)
-            {
-                var p1 = vertice[i];
-                try
-                {
-                    // Použití vnitřního API pro získání FitPointu
-                    var p2 = curve.GetClosestPointTo(p1, false);
-                    double dq = curve.GetParameterAtPoint(p2);
-                    double dx = curve.GetDistanceAtParameter(dq);
-                    // Když máme uzavřenou polyline, tak se může stát že dx = 0;
-                    if (i == vertice.Count - 1 && curve.Closed)
-                        dx = curve.GetDistanceAtParameter(curve.EndParam);
-                    if (dx < previous) continue;
-                    previous = dx;
-                    result.Add(new Point2d(dx, p2.Z));
-                }
-                catch (Exception exception)
-                { Console.WriteLine(exception.Message); }
-            }
-            return result;
-        }
-
-        List<List<Point2d>> Profiler_CollectIntersectsWith(Point3dCollection vertice, Curve curve, Solid3d solid)
-        {
-            List<List<Point2d>> result = new List<List<Point2d>>();
-            if (vertice.Count == 0) return result;
-            List<Point2d> tmp = new List<Point2d>();
-            double previous = 0.0;
-            using (AcBr.Brep brep = new AcBr.Brep(solid))
-            {
-                for (int i = 0; i < vertice.Count; i++)
-                {
-                    var p1 = vertice[i];
-                    try
-                    {
-                        // Použití vnitřního API pro získání FitPointu
-                        var p2 = curve.GetClosestPointTo(p1, false);
-                        double dq = curve.GetParameterAtPoint(p2);
-                        double dx = curve.GetDistanceAtParameter(dq);
-                        // Když máme uzavřenou polyline, tak se může stát že dx = 0;
-                        if (i == vertice.Count - 1 && curve.Closed)
-                            dx = curve.GetDistanceAtParameter(curve.EndParam);
-                        if (dx < previous) continue;
-                        previous = dx;
-                        LineSegment3d ray = new LineSegment3d(new Point3d(p2.X, p2.Y, 0), new Point3d(p2.X, p2.Y, 1E9));
-                        AcBr.Hit[] hits = brep.GetLineContainment(ray, 9);
-                        if (hits != null && hits.Length != 0)
-                        {
-                            var z = hits.Max(h => h.Point.Z);
-                            tmp.Add(new Point2d(dx, z));
-                        }
-                        else
-                        {
-                            // Segment je ukončený, resp v tomhle místě už paprsek neřeže objektem
-                            if (tmp.Count >= 2)
-#pragma warning disable IDE0306 // Simplify collection initialization
-                                result.Add(new List<Point2d>(tmp));
-#pragma warning restore IDE0306 // Simplify collection initialization
-                            tmp.Clear();
-                        }
-                    }
-                    catch (Exception exception)
-                    { Console.WriteLine(exception.Message); }
-                }
-                // Doplnění posledního segmentu do výsledku
-                if (tmp.Count >= 2)
-                    result.Add(tmp);
-            }
-            return result;
         }
 
         [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_3DFACE")]
-        public void Mc_Profile3dFace()
+        public void Pr_Profile3dFace()
         {
             if (!BcApp.IsAppProperlyInitialized) return;
             AcApp.Document document = BcApp.Document;
@@ -230,60 +118,88 @@ namespace BcToolsC.BCad.Commands
 
             if (!ValidateAppVersion(editor)) return;
 #if !NET45
-            if (!db.TileMode)
+            if (!ValidateModelSpace(editor, db)) return;
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
+            typeof(Line), typeof(Polyline), typeof(Polyline2d), typeof(Arc), typeof(Circle), typeof(Spline),
+            typeof(Polyline3d));
+            if (__curve == ObjectId.Null)
             {
-                editor.Warn("Povoleno pouze v modelovém prostoru.");
+                editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-            Matrix3d ucs = editor.CurrentUserCoordinateSystem;
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
-            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline));
-            if (__curve == ObjectId.Null) goto no_data;
-
-            var __point = GetPointFromPrompt(editor, "Vyberte vkládací bod");
-            if (__point == null) goto user_closed_dialog;
-            var point = __point.Value.TransformBy(ucs);
+            // Získání vstupu od uživatele
+            var __point = GetPointFromPrompt(editor, "Vyberte bod v modelovém prostoru");
+            if (__point == null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            var point = __point.Value.TransformBy(editor.CurrentUserCoordinateSystem);
             var scale = GetScaleFromPrompt(editor, "Zadejte měřítko Y", previousScaleY)
                 ?? new SCALE(1_000, 1_000);
-            previousScaleY = (int)scale.Y; 
+            previousScaleY = (int)scale.Y;
 
             PromptSelectionOptions options = new PromptSelectionOptions { MessageForAdding = $"\nVyberte všechny 3DFace: " };
             PromptSelectionResult evResult = editor.GetSelection(options, new SelectionFilter(new[] { new TypedValue((int)DxfCode.Start, "3DFACE") }));
-            if (evResult.Status != PromptStatus.OK) goto user_closed_dialog;
+            if (evResult.Status != PromptStatus.OK)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
             var __faces = evResult.Value;
-            if (__faces.Count == 0) goto no_data;
-
+            if (__faces.Count == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
             Call(t =>
             {
-                if (!t.TryGet(__curve, out Curve curve)) goto local_no_data;
-                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
-                Point3dCollection vertice = GetPolylineVertices(t, curve);
-                if (vertice.Count < 2) goto local_no_data;
-                if (curve.Closed) vertice.Add(vertice[0]);
-                var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
-                CoordinateZ[] coord = new CoordinateZ[vertice.Count];
-                for (int i = 0; i < vertice.Count; i++)
+                if (!t.TryGet(__curve, out Curve curve))
                 {
-                    var v = vertice[i];
-                    coord[i] = new CoordinateZ(v.X, v.Y, v.Z);
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return;
                 }
-                var polyline = factory.CreateLineString(coord);
-                long n = __faces.Count / 100L;
-                if (n == 0) n = 1;
-                // Budování koridoru sítě
-                List<Point3d> result = new List<Point3d>();
+                // Srovnávací rovina
+                double dl;
+                try { dl = curve.GetDistAtPoint(curve.EndPoint); }
+                catch { editor.Error("Chyba; Nepovedlo se získat délku objektu."); return; }
+                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
+                var vertice = GetPolylineVertices(t, curve).ToList();
+                int n = vertice.Count;
+                if (n < 2)
+                {
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return;
+                }
+                Point3d fst = vertice[0];
+                Point3d lst = vertice[n - 1];
+                bool reallyClosing = fst.IsEqualTo(lst, Tolerance.Global);
+                if (curve.Closed && !reallyClosing) vertice.Add(fst);
+                var pts = CollectVertice(vertice, curve);
+                var cmp = new List<Point3d>();
+                // Vytvoření topology geometrie
+                var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
+                var polyline = factory.CreateLineString(vertice.Select(v => new CoordinateZ(v.X, v.Y, v.Z)).ToArray());
+
+                var size = __faces.Count;
                 using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
                 {
+                    var last = 0;
                     progress.SetLimit(100);
-                    progress.Start("Buduji síť ...");
-                    int l = 0;
-                    for (int i = 0; i < __faces.Count; i++)
+                    progress.Start("Heldám průsečníky se sítí ...");
+                    for (int i = 0; i < size; i++)
                     {
                         var f = __faces[i];
-                        if (i % n == 0 && l < 100)
+                        int curr = (int)((double)i / size * 100);
+                        if (curr > last)
                         {
-                            progress.MeterProgress();
-                            l++;
+                            for (int j = 0; j < curr - last; j++)
+                                progress.MeterProgress();
+                            last = curr;
+#pragma warning disable CA1416 // Validate platform compatibility
+                            System.Windows.Forms.Application.DoEvents();
+#pragma warning restore CA1416 // Validate platform compatibility
+
                         }
                         try
                         {
@@ -296,122 +212,34 @@ namespace BcToolsC.BCad.Commands
                             }
                             var tmp = face.GetVertexAt(3);
                             arr[0] = new CoordinateZ(tmp.X, tmp.Y, tmp.Z);
-                            // X == other.X && Y == other.Y
                             if (!arr[0].Equals2D(arr[3])) continue;
                             var triangle = factory.CreatePolygon(arr);
                             if (triangle.Intersects(polyline))
                             {
                                 Geometry intersection = triangle.Intersection(polyline);
-                                var jmp = Profiler_CollectIntersectsWith(intersection);
+                                var jmp = CollectVerticeFromGeometry(intersection).ToList();
                                 if (jmp.Count == 0) continue;
-                                result.AddRange(jmp);
+                                cmp.AddRange(jmp);
                             }
-                        }
-                        catch (Exception exception)
-                        { Console.WriteLine(exception.Message); }
+                        } catch { }
                     }
                     progress.Stop();
                 }
-                var compare = new Pr_Point3dXYComparer();
-                var deduped = result.Distinct(compare).ToList();
-                List<Point2d> pts = new List<Point2d>();
-                n = deduped.Count / 100L;
-                if (n == 0) n = 1;
-                using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
-                {
-                    progress.SetLimit(100);
-                    progress.Start("Počítám profil ...");
-                    int l = 0;
-                    for (int i = 0; i < deduped.Count; i++)
-                    {
-                        var p1 = deduped[i];
-                        if (i % n == 0 && l < 100)
-                        {
-                            progress.MeterProgress();
-                            l++;
-                        }
-                        try
-                        {
-                            // Použití vnitřního API pro získání FitPointu
-                            var p2 = curve.GetClosestPointTo(p1, false);
-                            double dq = curve.GetParameterAtPoint(p2);
-                            double dv = curve.GetDistanceAtParameter(dq);
-                            pts.Add(new Point2d(dv, p1.Z));
-                        }
-                        catch (Exception exception)
-                        { Console.WriteLine(exception.Message); }
-                    }
-                    progress.Stop();
-                }
-                if (pts.Count < 2) goto local_no_data;
-                var ordered = pts.OrderBy(p => p.X).ToList();
-                List<MText> _mTextBringFront = new List<MText>();
-                double dx = point.X;
-                double dy = point.Y;
-                // Srovnávací rovina
-                double dl;
-                try { dl = curve.GetDistanceAtParameter(curve.EndParam); }
-                catch (Exception) { editor.Error("Chyba; Nepovedlo se získat délku objektu."); return; }
-                t.AddLWPolyline(new[] {
-                    new Point2d(dx, dy),
-                    new Point2d(dx + (2.5 * scale.sY), dy + (2.5 * scale.sY)),
-                    new Point2d(dx - (2.5 * scale.sY), dy + (2.5 * scale.sY))
-                }, shouldBeClosed: true);
-                // Výška
-                // Zde chceme získat výšku pro srovnávací rovinu,
-                // o kterou pak opravíme souřadnici Y
-                // --- VÝPOČET SROVNÁVACÍ ROVINY ---
-                double minY = pts.Min(p => p.Y);
-                var pMax = pts.Aggregate((a, b) => a.Y > b.Y ? a : b);
-                // Zaokrouhlení dolů na nejbližší desítku
-                double my = Math.Floor(minY / 10.0) * 10.0;
-                _mTextBringFront.Add(t.AddMText($"{my:N3}",
-                new Point2d(dx + (1.0 * scale.sY), dy + (2.5 - .2) * scale.sY),
-                height: 2.5 * scale.sY,
-                vMode: AttachmentPoint.BottomLeft, additional: (m) => {
-                    m.BackgroundFill = true;
-                    m.BackgroundScaleFactor = 1.0;
-                }));
-                t.AddLWPolyline(new Point2d(dx, dy), new Point2d(dx + dl * scale.sX, dy), color: 0);
-                t.AddLWPolyline(ordered.Select(p => new Point2d(p.X * scale.sX + dx, (p.Y - my) * scale.sY + dy)), color: 3);
-                // Vykreslení nejvyššího místa
-                t.AddLWPolyline(new Point2d(pMax.X * scale.sX + dx, dy), new Point2d(pMax.X * scale.sX + dx, (pMax.Y - my) * scale.sY + dy), color: 0);
-                // Posunutí textů nad kresbu
-                foreach (var mtx in _mTextBringFront) t.MoveToTop(mtx);
-                editor.Ok("Ok; Vykresleno v měřítku Y 1:" + scale.Y);
-                return;
-            local_no_data:
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
+                var ter = CollectVertice(cmp, curve, false).OrderBy(p => p.X).ToList();
+                double minY = pts.Select(p => p.Y).Concat(ter.Select(p => p.Y))
+                    .DefaultIfEmpty(0.0)
+                    .Min();
+                var maxY = pts.OrderByDescending(p => p.Y).FirstOrDefault();
+                DrawProfile(t, editor, pts, new List<List<Point2d>> { ter }, minY, maxY, point.X, point.Y, dl, scale);
             });
-            return;
-        no_data:
-            editor.Warn("Nebyla nalazena žádná data.");
-            return;
-        user_closed_dialog:
-            editor.Warn("Výběr byl zrušen uživatelem.");
-            return;
 #endif
         }
-
-        [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_DT4")]
-        public void Mc_ProfileDt4()
-        {
-            if (!BcApp.IsAppProperlyInitialized) return;
-            AcApp.Document document = BcApp.Document;
-            if (document == null) return;
-            Database db = document.Database;
-            Editor editor = document.Editor;
-
-            if (!ValidateAppVersion(editor)) return;
-        }
 #if !NET45
-        private static List<Point3d> Profiler_CollectIntersectsWith(Geometry intersection,
-            int recursiveDepth = 0)
+        static List<Point3d>
+        CollectVerticeFromGeometry(Geometry geometry)
         {
-            List<Point3d> result = new List<Point3d>();
-            if (recursiveDepth >= 3 || intersection.IsEmpty) return result;
-            switch (intersection)
+            var result = new List<Point3d>();
+            switch (geometry)
             {
                 case Point i:
                     var i0 = i.Coordinate;
@@ -425,12 +253,120 @@ namespace BcToolsC.BCad.Commands
                     result.Add(new Point3d(i21.X, i21.Y, i21.Z));
                     result.Add(new Point3d(i22.X, i22.Y, i22.Z));
                     break;
-                // Další druhy geometrie pro náš účel není třeba řešit
                 default:
                     break;
             }
             return result;
         }
 #endif
+
+        void DrawProfile(BCadTransaction t, Editor editor,
+            IEnumerable<Point2d> pts, IEnumerable<List<Point2d>> cmp, 
+            double minY, Point2d maxY,
+            double dx, double dy, double dl,
+            SCALE scale)
+        {
+            double elevation = Math.Floor(minY / 10.0) * 10.0;
+            // --- VYKRESLENÍ ---
+            t.AddLWPolyline(new[] { new Point2d(dx, dy), new Point2d(dx + (2.5 * scale.sY), dy + (2.5 * scale.sY)), new Point2d(dx - (2.5 * scale.sY), dy + (2.5 * scale.sY)) }, shouldBeClosed: true);
+            t.AddLWPolyline(new Point2d(dx, dy), new Point2d(dx + dl * scale.sX, dy), color: 0);
+            t.AddLWPolyline(new Point2d(maxY.X * scale.sX + dx, dy), new Point2d(maxY.X * scale.sX + dx, (maxY.Y - elevation) * scale.sY + dy), color: 0);
+            t.AddLWPolyline(pts.Select(p => new Point2d(p.X * scale.sX + dx, (p.Y - elevation) * scale.sY + dy)), color: 3);
+            foreach (var ter in cmp)
+                t.AddLWPolyline(ter.Select(p => new Point2d(p.X * scale.sX + dx, (p.Y - elevation) * scale.sY + dy)), color: 8);
+            t.MoveToTop(t.AddMText($"{elevation:N3}", new Point2d(dx + (1.0 * scale.sY), dy + (2.5 - .2) * scale.sY),
+                height: 2.5 * scale.sY,
+                vMode: AttachmentPoint.BottomLeft, additional: (m) => { m.BackgroundFill = true; m.BackgroundScaleFactor = 1.0; }));
+            editor.Ok("Ok; Vykresleno v měřítku Y 1:" + scale.Y);
+        }
+
+        static IEnumerable<Point2d>
+        CollectVertice(List<Point3d> vertice, Curve curve,
+            bool overrideZ = true)
+        {
+            if (vertice == null || vertice.Count == 0) yield break;
+            yield return new Point2d(0.0, curve.StartPoint.Z);
+            if (curve is Line line)
+            {
+                yield return new Point2d(line.Length, curve.EndPoint.Z);
+                yield break;
+            }
+            double dp = -1.0;
+            double dl = curve.GetDistAtPoint(curve.EndPoint);
+            for (int i = 1; i < vertice.Count; i++)
+            {
+                var p1 = vertice[i];
+                double dx;
+                double dy = p1.Z;
+                try
+                {
+                    var p2 = curve.GetClosestPointTo(p1, false);
+                    dx = curve.GetDistAtPoint(p2);
+                    if (overrideZ)
+                        dy = p2.Z;
+                    if (i == vertice.Count - 1 && curve.Closed && dx < (dl * 0.1))
+                        dx = dl;
+                }
+                catch { continue; }
+                if (dx <= dp + 1E-5 && i != 0)
+                    continue;
+                dp = dx;
+                yield return new Point2d(dx, dy);
+            }
+        }
+
+        static IEnumerable<List<Point2d>>
+        CollectVerticeFromSolid(List<Point3d> vertice, Curve curve, Solid3d solid)
+        {
+            List<Point2d> segment = new List<Point2d>();
+            double dp = -1.0;
+            double dl = curve.GetDistAtPoint(curve.EndPoint);
+            using (AcBr.Brep brep = new AcBr.Brep(solid))
+            {
+                for (int i = 0; i < vertice.Count; i++)
+                {
+                    var p1 = vertice[i];
+                    double dx;
+                    double? dy = null;
+                    var gap = false;
+                    try
+                    {
+                        var p2 = curve.GetClosestPointTo(p1, false);
+                        dx = curve.GetDistAtPoint(p2);
+                        if (i == vertice.Count - 1 && curve.Closed && dx < (dl * 0.1))
+                            dx = dl;
+                        if (dx <= dp + 1E-5 && i != 0)
+                            continue;
+                        dp = dx;
+
+                        // Vytvoření řezacího paprsku
+                        using (LineSegment3d ray = new LineSegment3d(new Point3d(p2.X, p2.Y, -1E5), new Point3d(p2.X, p2.Y, 1E5)))
+                        {
+                            AcBr.Hit[] hits = brep.GetLineContainment(ray, 9);
+                            if (hits != null && hits.Length > 0)
+                            {
+                                dy = hits.Max(h => h.Point.Z);
+                                foreach (var hit in hits) hit.Dispose();
+                            }
+                            else
+                            {
+                                if (segment.Count >= 2)
+                                    gap = true;
+                            }
+                        }
+                    }
+                    catch { continue; }
+                    if (gap)
+                    {
+                        yield return new List<Point2d>(segment);
+                        segment.Clear();
+                    }
+                    if (dy.HasValue)
+                        segment.Add(new Point2d(dx, dy.Value));
+                }
+                if (segment.Count >= 2)
+                    yield return new List<Point2d>(segment);
+            }
+        }
     }
 }

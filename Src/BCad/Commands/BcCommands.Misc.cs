@@ -1,4 +1,6 @@
 using System; // Keep for .NET 4.6
+using System.Collections.Generic; // Keep for .NET 4.6
+using System.Linq; // Keep for .NET 4.6
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -113,7 +115,7 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             var __curve = GetEntityFromPrompt(editor, "Vyberte křivku", 
-                typeof(Line), typeof(Polyline), typeof(Polyline2d), typeof(Arc), typeof(Circle), typeof(Spline));
+            typeof(Line), typeof(Polyline), typeof(Polyline2d), typeof(Arc), typeof(Circle), typeof(Spline));
             if (__curve == ObjectId.Null)
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
@@ -183,8 +185,8 @@ namespace BcToolsC.BCad.Commands
 
             if (!ValidateModelSpace(editor, db)) return;
             var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
-            typeof(Line), typeof(Spline), typeof(Polyline3d), typeof(Polyline2d), typeof(Polyline),
-            typeof(Arc), typeof(Circle));
+            typeof(Line), typeof(Polyline), typeof(Polyline2d), typeof(Arc), typeof(Circle), typeof(Spline),
+            typeof(Polyline3d));
             if (__curve == ObjectId.Null)
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
@@ -210,25 +212,20 @@ namespace BcToolsC.BCad.Commands
                     return;
                 }
                 if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
-                Point3dCollection vertice = GetPolylineVertices(t, curve);
-                if (vertice.Count < 2)
+                var vertice = GetPolylineVertices(t, curve).ToList();
+                int n = vertice.Count;
+                if (n < 2)
                 {
                     editor.Warn("Nebyla nalazena žádná data.");
                     return;
                 }
-                if (curve.Closed) vertice.Add(vertice[0]);
+                Point3d fst = vertice[0];
+                Point3d lst = vertice[n - 1];
+                bool reallyClosing = fst.IsEqualTo(lst, Tolerance.Global);
+                if (curve.Closed && !reallyClosing) vertice.Add(fst);
 
                 // Kontrola jestli má smysl vykreslovat část pro výšku Z
-                var hasZ = false;
-                for (int i = 0; i < vertice.Count; i++)
-                {
-                    var p = vertice[i];
-                    if (Math.Abs(p.Z) > .1)
-                    {
-                        hasZ = true;
-                        break;
-                    }
-                }
+                bool hasZ = vertice.Any(p => Math.Abs(p.Z) > 0.1);
 
                 // Vytvoření tabulky
                 Table table = new Table();
@@ -236,17 +233,18 @@ namespace BcToolsC.BCad.Commands
                 table.Position = point;
 
                 int cols = hasZ ? 4 : 3;
-                int rows = vertice.Count
-                // Navíc pro hlavičku
-                + 2;
+                int rows = n + 2; 
+
                 table.SetSize(rows, cols);
                 table.GenerateLayout();
+
                 table.Cells[0, 0].TextString = "Vytyčení";
                 table.Cells[1, 0].TextString = "n";
                 table.Cells[1, 1].TextString = "Y (m)";
                 table.Cells[1, 2].TextString = "X (m)";
                 if (hasZ) table.Cells[1, 3].TextString = "Z (m)";
-                for (int i = 0; i < vertice.Count; i++)
+
+                for (int i = 0; i < n; i++)
                 {
                     int row = i + 2;
                     Point3d p = vertice[i];

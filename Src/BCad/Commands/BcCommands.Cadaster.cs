@@ -28,6 +28,10 @@ using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
 using BcToolsC.BCad.Commands.Models;
 
+#if !NET45
+using NetTopologySuite.Geometries;
+#endif
+
 namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands

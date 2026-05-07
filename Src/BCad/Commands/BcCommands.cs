@@ -40,25 +40,6 @@ namespace BcToolsC.BCad.Commands
     {
         const string __chars = "abcdefghijklmnopqrstuvwxyz";
 
-        static AcDbCurve? GetCurve(ObjectId __curve,
-            BCadTransaction r = null)
-        {
-            if (__curve.IsNull) return null;
-            Func<BCadTransaction, AcDbCurve?> f = t =>
-            {
-                if (!t.TryGet(__curve, out Curve curve)) return null;
-                Point3dCollection vertice = GetPolylineVertices(t, curve); ;
-                if (vertice.Count < 2) return null;
-                Point3d fst = vertice[0];
-                Point3d lst = vertice[vertice.Count - 1];
-                bool reallyClosing = fst.IsEqualTo(lst, Tolerance.Global);
-                if (curve.Closed && !reallyClosing) vertice.Add(fst);
-                return new AcDbCurve(curve.GeometricExtents, vertice,
-                    curve.Closed, reallyClosing);
-            };
-            return r == null ? BCadTransaction.Wrap(f) : f(r);
-        }
-
         static bool IsPointInPolygon(Point3d point, Point2dCollection polygon)
         {
             if (polygon == null || polygon.Count < 3) return false;
@@ -87,9 +68,8 @@ namespace BcToolsC.BCad.Commands
             return inside;
         }
 
-        static Point3dCollection GetPolylineVertices(BCadTransaction t, Curve curve)
+        static IEnumerable<Point3d> GetPolylineVertices(BCadTransaction t, Curve curve)
         {
-            var result = new Point3dCollection();
             switch (curve)
             {
                 case Polyline3d poly3d:
@@ -98,10 +78,10 @@ namespace BcToolsC.BCad.Commands
                         && t.TryGet(v3dId, out PolylineVertex3d vertex) && vertex != null)
                     {
                         if (t3d == Poly3dType.SimplePoly && vertex.VertexType == Vertex3dType.SimpleVertex)
-                            result.Add(vertex.Position);
+                            yield return vertex.Position;
                         else if ((t3d == Poly3dType.CubicSplinePoly || t3d == Poly3dType.QuadSplinePoly)
                         && vertex.VertexType != Vertex3dType.ControlVertex)
-                            result.Add(vertex.Position);
+                            yield return vertex.Position;
                     }
                     break;
                 case Polyline2d poly2d:
@@ -110,7 +90,7 @@ namespace BcToolsC.BCad.Commands
                         && t.TryGet(v2dId, out Vertex2d vertex) && vertex != null)
                     {
                         if (t2d == Poly2dType.SimplePoly && vertex.VertexType == Vertex2dType.SimpleVertex)
-                            result.Add(vertex.Position);
+                            yield return vertex.Position;
                         // Další druhy 2d polyline neřešíme, protože nejsou už podporované
                     }
                     break;
@@ -119,36 +99,38 @@ namespace BcToolsC.BCad.Commands
                     for (int i = 0; i < n; i++)
                     {
                         var p = polyLw.GetPoint3dAt(i);
-                        result.Add(p);
-                        int j = (i + 1) % n;
-                        if (!polyLw.Closed && i == n - 1) break;
+                        yield return p;
                         double bulge = polyLw.GetBulgeAt(i);
                         if (Math.Abs(bulge) > 1E-5)
                         {
-                            Point3d pB = polyLw.GetPoint3dAt(j);
-                            ArcToVertices(result, BulgeToArc(p, pB, bulge));
+                            int j = (i + 1) % n;
+                            if (!polyLw.Closed && i == n - 1) continue;
+                            Point3d k = polyLw.GetPoint3dAt(j);
+                            foreach (var l in ArcToVertices(BulgeToArc(p, k, bulge)))
+                                yield return l;
                         }
                     }
                     break;
                 case Arc arc:
-                    ArcToVertices(result, arc);
+                    foreach (var p in ArcToVertices(arc)) yield return p;
                     break;
                 case Circle circle:
-                    ArcToVertices(result, new Arc(circle.Center, circle.Radius, 0, Math.PI * 2.0));
+                    var circleArc = new Arc(circle.Center, circle.Radius, 0, Math.PI * 2.0);
+                    foreach (var p in ArcToVertices(circleArc)) yield return p;
                     break;
                 case Line line:
-                    result.Add(line.StartPoint);
-                    result.Add(line.EndPoint);
+                    yield return line.StartPoint;
+                    yield return line.EndPoint;
                     break;
                 case Spline spline:
-                    if (spline.HasFitData) for (int i = 0; i < spline.NumFitPoints; i++)
-                        result.Add(spline.GetFitPointAt(i));
-                    else for (int i = 0; i < spline.NumControlPoints; i++)
-                        result.Add(spline.GetControlPointAt(i));
+                    if (spline.HasFitData)
+                        for (int i = 0; i < spline.NumFitPoints; i++)
+                            yield return spline.GetFitPointAt(i);
+                    else
+                        for (int i = 0; i < spline.NumControlPoints; i++) 
+                            yield return spline.GetControlPointAt(i);
                     break;
-                default: break;
             }
-            return result;
         }
 
         static Arc BulgeToArc(Point3d a, Point3d b, 
@@ -183,14 +165,15 @@ namespace BcToolsC.BCad.Commands
                     startAng, endAng);
         }
 
-        static void ArcToVertices(Point3dCollection _vertices, Arc arc)
+        static IEnumerable<Point3d> ArcToVertices(Arc arc)
         {
             double length = arc.Length;
-            if (length < 1E-5) return;
+            if (length < 1E-5) yield break;
 
             // Dynamický počet segmentů
             int segments = (int)Math.Max(2, length / 0.5);
             segments = Math.Max(3, Math.Min(segments, 100));
+
             double startAng = arc.StartAngle;
             double endAng = arc.EndAngle;
             if (endAng < startAng) endAng += Math.PI * 2.0;
@@ -199,7 +182,7 @@ namespace BcToolsC.BCad.Commands
             for (int i = 1; i < segments; i++)
             {
                 ANGLE angle = startAng + (i * step);
-                _vertices.Add(arc.GetPointAtParameter(angle));
+                yield return arc.GetPointAtParameter(angle);
             }
         }
 
@@ -696,21 +679,5 @@ namespace BcToolsC.BCad.Commands
                 return rlPath;
             return null;
         }
-
-#if !NET45
-        static bool GetIntersectionArea(Geometry polygon, Geometry ring,
-            out Geometry intersection, out double area)
-        {
-            intersection = null;
-            area = default;
-            if (ring.Covers(polygon)) return true;
-            var inside = ring.Intersects(polygon);
-            if (!inside) return false;
-            intersection = polygon.Intersection(ring);
-            if (intersection == null || intersection.IsEmpty) return false;
-            Console.WriteLine(intersection.Area);
-            return inside;
-        }
-#endif
     }
 }

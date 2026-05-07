@@ -39,9 +39,6 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_vut_32.png" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_dt4_32.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_relief_cz_32.ico" />
   </ItemGroup>
   <ItemGroup>
