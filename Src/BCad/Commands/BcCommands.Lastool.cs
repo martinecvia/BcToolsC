@@ -1,9 +1,7 @@
-#pragma warning disable
 using System; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
 using System.IO;
-using System.Globalization;
 
 using System.Diagnostics;
 using System.Windows;
@@ -29,8 +27,8 @@ using Autodesk.AutoCAD.Windows;
 #endregion
 
 using static BcToolsC.BCad.Transactions.BCadTransaction;
-using BcToolsC.BCad.Transactions;
 using BcToolsC.Models;
+using BcToolsC.BCad.Commands.Models;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -73,19 +71,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    theme, wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            } catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic(theme, wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -154,19 +140,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    "DMR5G-SJTSK", wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            } catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic("DMR5G-SJTSK", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -275,7 +249,6 @@ namespace BcToolsC.BCad.Commands
             }
 
             // Vložení dat do výkresu
-            Console.WriteLine($"Separator: '{separator}'");
             if (!TryProcessCoordinatesFile(txtPath, separator))
             {
                 editor.Warn("Nebyla nalazena žádná data.");

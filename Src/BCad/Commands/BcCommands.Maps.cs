@@ -17,8 +17,6 @@ using Autodesk.AutoCAD.EditorInput;
 #endif
 #endregion
 
-using static BcToolsC.Helpers.KrovakHelper;
-
 namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands
@@ -48,7 +46,7 @@ namespace BcToolsC.BCad.Commands
             if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
 
             // Převedení S-JTSK souřadnic do WGS-84
-            __4326 wgs84 = GetWGS84FromPoint(point);
+            var wgs84 = GetWGS84FromPoint(point);
             try
             {
                 string url = string.Format(endpoint,

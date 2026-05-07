@@ -112,7 +112,8 @@ namespace BcToolsC.BCad.Commands
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
-            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku", typeof(Curve));
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku", 
+                typeof(Line), typeof(Polyline), typeof(Polyline2d), typeof(Arc), typeof(Circle), typeof(Spline));
             if (__curve == ObjectId.Null)
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");

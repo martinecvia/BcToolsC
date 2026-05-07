@@ -4,12 +4,10 @@ using System; // Keep for .NET 4.6
 #if ZWCAD
 using ZwSoft.ZwCAD.Geometry;
 using ZwSoft.ZwCAD.DatabaseServices;
-using ZwSoft.ZwCAD.GraphicsInterface;
 using ZwSoft.ZwCAD.EditorInput;
 #else
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.GraphicsInterface;
 using Autodesk.AutoCAD.EditorInput;
 #endif
 #endregion
@@ -52,9 +50,10 @@ namespace BcToolsC.BCad.Commands.Models
                 return SamplerStatus.OK;
             else if (evResult.Status == PromptStatus.OK)
             {
-                if (__point != null && __point.Value.IsEqualTo(evResult.Value))
+                if (__point != null && __point.Value.IsEqualTo(evResult.Value, Tolerance.Global))
                     return SamplerStatus.NoChange;
-                __point = evResult.Value;
+                // Transformace opravuje problém kdy uživatel má nastaven jiný souřadný systém
+                __point = evResult.Value.TransformBy(editor.CurrentUserCoordinateSystem);
                 return SamplerStatus.OK;
             }
             return SamplerStatus.Cancel;

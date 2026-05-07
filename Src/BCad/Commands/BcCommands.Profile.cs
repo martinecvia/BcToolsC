@@ -1,4 +1,3 @@
-#pragma warning disable IDE0028, IDE0057, IDE0062, IDE0063, IDE0090, IDE1006
 using System; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
@@ -23,8 +22,10 @@ using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
+
 #if !NET45
 using NetTopologySuite.Geometries;
+using BcToolsC.BCad.Commands.Models;
 #endif
 
 namespace BcToolsC.BCad.Commands
@@ -217,18 +218,7 @@ namespace BcToolsC.BCad.Commands
             }
             return result;
         }
-#if !NET45
-        class Point3dXYComparer : IEqualityComparer<Point3d>
-        {
-            readonly double _tolerance;
-            public Point3dXYComparer(double tolerance = 1E-5) { _tolerance = tolerance; }
-            public bool Equals(Point3d a, Point3d b)
-                => Math.Abs(a.X - b.X) < _tolerance
-                && Math.Abs(a.Y - b.Y) < _tolerance;
-            private long Q(double value) => (long)Math.Round(value / _tolerance);
-            public int GetHashCode(Point3d p) => (Q(p.X).GetHashCode() * 397) ^ Q(p.Y).GetHashCode();
-        }
-#endif
+
         [AcRun.CommandMethod("BCTOOLSC_PR_PROFILE_3DFACE")]
         public void Mc_Profile3dFace()
         {
@@ -322,7 +312,7 @@ namespace BcToolsC.BCad.Commands
                     }
                     progress.Stop();
                 }
-                var compare = new Point3dXYComparer();
+                var compare = new Pr_Point3dXYComparer();
                 var deduped = result.Distinct(compare).ToList();
                 List<Point2d> pts = new List<Point2d>();
                 n = deduped.Count / 100L;

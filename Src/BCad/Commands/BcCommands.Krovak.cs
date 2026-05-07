@@ -1,6 +1,3 @@
-#pragma warning disable
-using System; // Keep for .NET 4.6
-
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
 using AcApp = ZwSoft.ZwCAD.ApplicationServices;

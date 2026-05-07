@@ -1,4 +1,3 @@
-#pragma warning disable
 using System; // Keep for .NET 4.6
 using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
@@ -7,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.IO.Compression;
 using System.Xml;
 using System.Globalization;
+using System.Windows;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -26,13 +26,14 @@ using Autodesk.AutoCAD.EditorInput;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
-using System.Windows;
+using BcToolsC.BCad.Commands.Models;
 
 namespace BcToolsC.BCad.Commands
 {
     public partial class BcCommands
     {
-        readonly Regex _knRegex = new Regex(@":\s*(.*?)\s*\[",RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        readonly Regex _knRegex = new Regex(@":\s*(.*?)\s*\[", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        readonly Regex _tnRegex = new Regex(@"[?&]Id=([^&]+)", RegexOptions.Compiled);
         readonly Dictionary<string, string> Kn_TypeThemeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "DXF", "KM-KU-DXF" },
@@ -109,30 +110,6 @@ namespace BcToolsC.BCad.Commands
             { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/PhotovoltaicPowerPlant", "fotovoltaická elektrárna" }
         };
 
-        public sealed class AcParcel
-        {
-            public AcParcel(string puid, string zuid)
-            { Puid = puid; Zuid = zuid; }
-
-            public Point2d Point { get; set; }
-            public Point2dCollection Geometry 
-            { get; set; }
-
-            public string Land { get; set; }
-            public string Uses { get; set; }
-            public string Town { get; set; }
-            public double Area { get; set; }
-            public string Name { get; set; }
-            public string Zone { get; set; }
-
-
-            public readonly string Puid;         // Parcela Id
-
-            public readonly string Zuid;         // Katastrální území Id
-            public string Tuid { get; set; }     // Obec Id
-            public string Buid { get; set; }     // Budova Id
-        }
-
         [AcRun.CommandMethod("BCTOOLSC_KN_VR")]
         public void Kn_DownloadAndAttachVrstevnice()
         {
@@ -156,20 +133,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    "ZABAGED-vyskopis-DGN", wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            }
-            catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic("ZABAGED-vyskopis-DGN", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -177,7 +141,7 @@ namespace BcToolsC.BCad.Commands
 
             // Výběr konkrétního mapového listu
             if (!TrySelectEntry(editor, response, "mapový list: ", out AtomicEntries.Entry entry))
-                return;
+            return;
 
             // Stažení dat
             byte[] data = DownloadDataWithProgress(entry.Link);
@@ -227,20 +191,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    "CPX", wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            }
-            catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic("CPX", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -257,17 +208,10 @@ namespace BcToolsC.BCad.Commands
                 editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                 return;
             }
-            var parcels = ParseParcelData(data);
-            int n = parcels.Count;
-            if (n == 0)
-            {
-                editor.Warn("Nebyla nalazena žádná data.");
-                return;
-            }
-
+            var parcels = ListParcel(data);
             // Kontrola jestli jsme vevnitř
-            AcParcel parcel = null;
-            for (int i = 0; i < n; i++)
+            AcDbParcel parcel = null;
+            for (int i = 0; i < parcels.Count; i++)
             {
                 var p = parcels[i];
                 if (IsPointInPolygon(point, p.Geometry))
@@ -295,136 +239,6 @@ namespace BcToolsC.BCad.Commands
             return;
         }
 
-        private List<AcParcel> ParseParcelData(byte[] data)
-        {
-            List<AcParcel> result = new List<AcParcel>();
-            if (data == null || data.Length == 0) return result;
-            try
-            {
-                using (var ms = new MemoryStream(data, writable: false))
-                using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: false))
-                {
-                    var zipEntry = archive.Entries?.FirstOrDefault(e => !string.IsNullOrEmpty(e.Name) &&
-                         e.Name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase));
-                    if (zipEntry == null) return result;
-                    using (var stream = zipEntry.Open())
-                    using (var reader = XmlReader.Create(stream, new XmlReaderSettings
-                    {
-                        IgnoreComments = true,
-                        IgnoreWhitespace = true,
-                    }))
-                    {
-                        while (reader.Read())
-                        {
-                            if (reader.NodeType == XmlNodeType.Element &&
-                                            (reader.Name == "cp:CadastralParcel" 
-                                          || reader.Name == "cp-ext:CadastralParcel"))
-                            {
-                                AcParcel parcel = new AcParcel(
-                                    reader.GetAttribute("id", "http://www.opengis.net/gml/3.2"),
-                                    zipEntry.Name
-                                    // Odstranění pozůstatkového .xml
-                                    .Substring(0, zipEntry.Name.Length - 4)
-                                );
-                                using (XmlReader parcelReader = reader.ReadSubtree())
-                                {
-                                    while (parcelReader.Read())
-                                    {
-                                        if (parcelReader.NodeType != XmlNodeType.Element) continue;
-                                        // Point
-                                        if (reader.LocalName == "pos")
-                                        {
-                                            string pos = reader.ReadElementContentAsString();
-                                            if (string.IsNullOrEmpty(pos)) continue;
-                                            string[] posList = pos.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                                            parcel.Point = new Point2d(
-                                                double.Parse(posList[0], CultureInfo.InvariantCulture),
-                                                double.Parse(posList[1], CultureInfo.InvariantCulture));
-                                        }
-                                        // Geometry
-                                        else if (reader.LocalName == "posList")
-                                        {
-                                            string pos = reader.ReadElementContentAsString();
-                                            if (string.IsNullOrEmpty(pos)) continue;
-                                            // Dělení -614529.93 -1076451.27 -614532.53 -1076449.18,
-                                            // na jednotlivé souřadnice
-                                            string[] posList = pos.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                                            // Validace jestli má parcela dostatek bodů pro vytvoŘení uzavřeného polygonu
-                                            int n = posList.Length;
-                                            if (n % 2 != 0)
-                                            {
-                                                Console.WriteLine($"Debug; Parcela nemá sudý počet souřadnic.");
-                                                continue;
-                                            }
-                                            Point2dCollection geometry = new Point2dCollection();
-                                            int j = 0;
-                                            for (int i = 0; i + 1 < posList.Length; i += 2)
-                                            {
-                                                geometry.Add(new Point2d(
-                                                    double.Parse(posList[i], CultureInfo.InvariantCulture),
-                                                    double.Parse(posList[i + 1], CultureInfo.InvariantCulture)));
-                                                j++;
-                                            }
-                                            parcel.Geometry = geometry;
-                                        }
-                                        // Land
-                                        else if (reader.LocalName == "landType")
-                                        {
-                                            var href = reader.GetAttribute("xlink:href");
-                                            if (string.IsNullOrEmpty(href))
-                                                parcel.Land = "ostatní plocha";
-                                            else
-                                                if (Kn_LandTypeMap.TryGetValue(href, out string land))
-                                                    parcel.Land = land;
-                                                else
-                                                    parcel.Land = "ostatní plocha";
-                                        }
-                                        // Uses
-                                        else if (reader.LocalName == "landUse")
-                                        {
-                                            var href = reader.GetAttribute("xlink:href");
-                                            if (!string.IsNullOrEmpty(href))
-                                                if (Kn_LandUsesMap.TryGetValue(href, out string uses))
-                                                    parcel.Uses = uses;
-                                        }
-                                        // Town
-                                        // Tuid
-                                        else if (reader.LocalName == "administrativeUnit")
-                                        {
-                                            parcel.Town = reader.GetAttribute("xlink:title");
-                                            var href = reader.GetAttribute("xlink:href");
-                                            if (!string.IsNullOrEmpty(href))
-                                            {
-                                                var match = Regex.Match(href, @"[?&]Id=([^&]+)");
-                                                if (match.Success) parcel.Tuid = match.Groups[1].Value;
-                                            }
-                                        }
-                                        // Area
-                                        else if (reader.LocalName == "areaValue")
-                                            parcel.Area = reader.ReadElementContentAsDouble();
-                                        // Name
-                                        else if (reader.LocalName == "label")
-                                            parcel.Name = reader.ReadElementContentAsString();
-                                        // Zone
-                                        else if (reader.LocalName == "zoning")
-                                            parcel.Zone = reader.GetAttribute("xlink:title");
-                                        // Buid
-                                        else if (reader.LocalName == "building")
-                                            parcel.Buid = reader.GetAttribute("xlink:title");
-                                    }
-                                }
-                                if (parcel.Area != 0)
-                                    result.Add(parcel);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception exception)
-            { Console.WriteLine(exception.Message); }
-            return result;
-        }
-
         [AcRun.CommandMethod("BCTOOLSC_KN_AT")]
         public void Kn_DownloadAndAttachKn()
         {
@@ -448,20 +262,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    "KM-KU-DXF", wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            }
-            catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic("KM-KU-DXF", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -518,35 +319,16 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
-            var wgs84 = GetWGS84FromPoint(point);
-
             var __theme = GetKeywordFromPrompt(editor, "Vyberte formát", Kn_TypeThemeMap.Keys.ToArray());
-            if (string.IsNullOrEmpty(__theme))
-            {
-                editor.Warn("Výběr byl zrušen uživatelem.");
-                return;
-            }
             if (string.IsNullOrEmpty(__theme) || !Kn_TypeThemeMap.TryGetValue(__theme, out string theme))
             {
                 editor.Warn("Výběr byl zrušen uživatelem.");
                 return;
             }
+            var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    theme, wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            }
-            catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic(theme, wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -588,6 +370,129 @@ namespace BcToolsC.BCad.Commands
             }
 
             editor.Ok("Ok; Soubory uloženy do: " + dialog.ResultPath);
+        }
+
+        private List<AcDbParcel> ListParcel(byte[] data)
+        {
+            var result = new List<AcDbParcel>();
+            if (data == null || data.Length == 0) return result;
+            try
+            {
+                using (var ms = new MemoryStream(data, writable: false))
+                using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: false))
+                {
+                    var zipEntry = archive.Entries?.FirstOrDefault(e => !string.IsNullOrEmpty(e.Name) &&
+                         e.Name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase));
+                    if (zipEntry == null) return result;
+                    using (var stream = zipEntry.Open())
+                    using (var xmlReader = XmlReader.Create(stream, new XmlReaderSettings
+                    {
+                        IgnoreComments = true,
+                        IgnoreWhitespace = true,
+                    }))
+                    {
+                        while (xmlReader.Read())
+                        {
+                            if (xmlReader.NodeType == XmlNodeType.Element && xmlReader.LocalName == "CadastralParcel")
+                            {
+                                var parcel = ReadParcel(xmlReader);
+                                if (parcel != null && parcel.Area != 0)
+                                    result.Add(parcel);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception exception)
+            { Console.WriteLine(exception.Message); }
+            return result;
+        }
+
+        private AcDbParcel ReadParcel(XmlReader xmlReader)
+        {
+            var parcel = new AcDbParcel(xmlReader.GetAttribute("id", "http://www.opengis.net/gml/3.2"));
+            using (XmlReader reader = xmlReader.ReadSubtree())
+            {
+                while (reader.Read())
+                {
+                    if (reader.NodeType != XmlNodeType.Element) continue;
+                    switch (reader.LocalName)
+                    {
+                        // Point
+                        case "pos":
+                            string pos = reader.ReadElementContentAsString();
+                            if (string.IsNullOrEmpty(pos)) continue;
+                            string[] posEntries = pos.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                            parcel.Point = new Point2d(
+                                double.Parse(posEntries[0], CultureInfo.InvariantCulture),
+                                double.Parse(posEntries[1], CultureInfo.InvariantCulture));
+                            break;
+                        // Geometry
+                        case "posList":
+                            string posList = reader.ReadElementContentAsString();
+                            if (string.IsNullOrEmpty(posList)) continue;
+                            string[] posListEntries = posList.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                            // Validace jestli má parcela dostatek bodů pro vytvoření uzavřeného polygonu
+                            int n = posListEntries.Length;
+                            if (n % 2 != 0)
+                            {
+                                Console.WriteLine($"Debug; Parcela nemá sudý počet souřadnic.");
+                                continue;
+                            }
+                            int j = 0;
+                            for (int i = 0; i + 1 < posListEntries.Length; i += 2)
+                            {
+                                parcel.Geometry.Add(new Point2d(
+                                    double.Parse(posListEntries[i], CultureInfo.InvariantCulture),
+                                    double.Parse(posListEntries[i + 1], CultureInfo.InvariantCulture)));
+                                j++;
+                            }
+                            break;
+                        // Land
+                        case "landType":
+                            var landType = reader.GetAttribute("xlink:href");
+                            if (string.IsNullOrEmpty(landType)) parcel.Land = "ostatní plocha";
+                            else
+                            {
+                                if (Kn_LandTypeMap.TryGetValue(landType, out string land)) parcel.Land = land;
+                                else parcel.Land = "ostatní plocha";
+                            }
+                            break;
+                        // Uses
+                        case "landUse":
+                            var landUse = reader.GetAttribute("xlink:href");
+                            if (string.IsNullOrEmpty(landUse)) continue;
+                            if (Kn_LandUsesMap.TryGetValue(landUse, out string uses)) parcel.Uses = uses;
+                            break;
+                        // Town
+                        // Tuid
+                        case "administrativeUnit":
+                            parcel.Town = reader.GetAttribute("xlink:title");
+                            var administrativeUnit = reader.GetAttribute("xlink:href");
+                            if (string.IsNullOrEmpty(administrativeUnit)) continue;
+                            var match = _tnRegex.Match(administrativeUnit);
+                            if (match.Success) parcel.Tuid = match.Groups[1].Value;
+                            break;
+                        // Area
+                        case "areaValue":
+                            parcel.Area = reader.ReadElementContentAsDouble();
+                            break;
+                        // Name
+                        case "label":
+                            parcel.Name = reader.ReadElementContentAsString();
+                            break;
+                        // Zone
+                        case "zoning":
+                            parcel.Zone = reader.GetAttribute("xlink:title");
+                            break;
+                        // Buid
+                        case "building":
+                            parcel.Buid = reader.GetAttribute("xlink:title");
+                            break;
+                    }
+                }
+            }
+            return parcel;
         }
     }
 }

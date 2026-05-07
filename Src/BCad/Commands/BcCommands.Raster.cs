@@ -1,9 +1,7 @@
-#pragma warning disable
 using System; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
 using System.IO;
-using System.Globalization;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -22,8 +20,8 @@ using Autodesk.AutoCAD.EditorInput;
 #endregion
 
 using static BcToolsC.BCad.Transactions.BCadTransaction;
-using static BcToolsC.Helpers.KrovakHelper;
 using BcToolsC.BCad.Transactions;
+using BcToolsC.BCad.Commands.Models;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -60,23 +58,10 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             if (!ValidatePointInsideRelief(editor, __point.Value, out Point3d point)) return;
-            __4326 wgs84 = GetWGS84FromPoint(point);
+            var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    "ORTOFOTO", wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            }
-            catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic("ORTOFOTO", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -153,19 +138,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            AtomicEntries response = null;
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    theme, wgs84.L, wgs84.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json))
-                    throw new Exception("Prázdná odpověď serveru.");
-                response = Deserialize<AtomicEntries>(json);
-            } catch (Exception exception)
-            { editor.Error("Chyba; " + exception.Message); return; }
-            if (response?.Entries == null || response.Entries.Count == 0)
+            if (!TryFetchAtomic(theme, wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -273,6 +246,7 @@ namespace BcToolsC.BCad.Commands
                 ReadDouble(jgwData[0]) * 10_000 * 2.0,   // increment X per pixel
                 ReadDouble(jgwData[1]),                  // yaw
                 ReadDouble(jgwData[2]),                  // pitch
+                // increment Y per pixel
                 ReadDouble(jgwData[3]) * 10_000 * 0.8 * 2.0,
                 ReadDouble(jgwData[4]),                  // X
                 ReadDouble(jgwData[5]),                  // Y

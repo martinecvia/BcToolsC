@@ -1,4 +1,3 @@
-#pragma warning disable
 using System; // Keep for .NET 4.6
 using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
@@ -7,7 +6,6 @@ using System.Text;
 using System.Runtime.Serialization.Json;
 using System.Net;
 using System.IO.Compression;
-using System.Runtime.Serialization;
 using System.Windows;
 using System.Text.RegularExpressions;
 
@@ -29,8 +27,7 @@ using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
 using static BcToolsC.Helpers.CompressHelper;
 using BcToolsC.BCad.Transactions;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
-using System.Globalization;
+using BcToolsC.BCad.Commands.Models;
 
 #if !NET45
 using NetTopologySuite.Geometries;
@@ -43,172 +40,113 @@ namespace BcToolsC.BCad.Commands
     {
         const string __chars = "abcdefghijklmnopqrstuvwxyz";
 
-        [DataContract]
-        class AtomicEntries
-        {
-            [DataMember(Name = "entry", IsRequired = false, EmitDefaultValue = false)]
-            public List<Entry> Entries { get; set; }
-            [DataContract]
-            public class Entry
-            {
-                [DataMember(Name = "id", IsRequired = true)]
-                public string Link { get; set; }
-                [DataMember(Name = "title", IsRequired = true)]
-                public string Name { get; set; }
-                [DataMember(Name = "length", IsRequired = true)]
-                public int Length { get; set; }
-            }
-        }
-
-        [DataContract]
-        readonly struct AcDbCurve
-        {
-            public readonly Extents3d Bounds;
-            public readonly Point3dCollection Vertices;
-            public readonly bool Closed;
-            public readonly bool ReallyClosing;
-            public AcDbCurve(Extents3d _bounds, Point3dCollection _vertices, bool _closed, bool _reallyClosing)
-            {
-                Bounds = _bounds;
-                Vertices = _vertices;
-                Closed = _closed;
-                ReallyClosing = _reallyClosing;
-            }
-        }
-
         static AcDbCurve? GetCurve(ObjectId __curve,
             BCadTransaction r = null)
         {
             if (__curve.IsNull) return null;
-            AcDbCurve? f(BCadTransaction t)
+            Func<BCadTransaction, AcDbCurve?> f = t =>
             {
                 if (!t.TryGet(__curve, out Curve curve)) return null;
-                Point3dCollection vertice = GetPolylineVertices(t, curve);
+                Point3dCollection vertice = GetPolylineVertices(t, curve); ;
                 if (vertice.Count < 2) return null;
                 Point3d fst = vertice[0];
                 Point3d lst = vertice[vertice.Count - 1];
-                bool reallyClosing = fst.IsEqualTo(lst);
+                bool reallyClosing = fst.IsEqualTo(lst, Tolerance.Global);
                 if (curve.Closed && !reallyClosing) vertice.Add(fst);
-                return new AcDbCurve(curve.GeometricExtents, vertice, 
+                return new AcDbCurve(curve.GeometricExtents, vertice,
                     curve.Closed, reallyClosing);
-            }
-            if (r == null)
-                return BCadTransaction.Wrap(f);
-            else
-                return f(r);
+            };
+            return r == null ? BCadTransaction.Wrap(f) : f(r);
         }
-#if !NET45
-        static bool GetIntersectionArea(Geometry polygon, Geometry ring,
-            out Geometry intersection, out double area)
-        {
-            intersection = null;
-            area = default;
-            if (ring.Covers(polygon)) return true;
-            var inside = ring.Intersects(polygon);
-            if (!inside) return false;
-            intersection = polygon.Intersection(ring);
-            if (intersection == null || intersection.IsEmpty) return false;
-            Console.WriteLine(intersection.Area);
-            return inside;
-        }
-#endif
 
-        public bool IsPointInPolygon(Point3d point, Point2dCollection polygon)
+        static bool IsPointInPolygon(Point3d point, Point2dCollection polygon)
         {
-            double minX = polygon[0].X;
-            double maxX = polygon[0].X;
-            double minY = polygon[0].Y;
-            double maxY = polygon[0].Y;
-            for (int i = 1; i < polygon.Count; i++)
+            if (polygon == null || polygon.Count < 3) return false;
+
+            double minX = polygon[0].X, maxX = polygon[0].X;
+            double minY = polygon[0].Y, maxY = polygon[0].Y;
+
+            foreach (Point2d p in polygon)
             {
-                Point2d q = polygon[i];
-                minX = Math.Min(q.X, minX);
-                maxX = Math.Max(q.X, maxX);
-                minY = Math.Min(q.Y, minY);
-                maxY = Math.Max(q.Y, maxY);
+                minX = Math.Min(p.X, minX); maxX = Math.Max(p.X, maxX);
+                minY = Math.Min(p.Y, minY); maxY = Math.Max(p.Y, maxY);
             }
 
             if (point.X < minX || point.X > maxX || point.Y < minY || point.Y > maxY) return false;
+
             // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
             bool inside = false;
             for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
             {
-                if ((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y) &&
-                     point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X)
+                if (((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y)) &&
+                    (point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X))
+                {
                     inside = !inside;
+                }
             }
             return inside;
         }
 
         static Point3dCollection GetPolylineVertices(BCadTransaction t, Curve curve)
         {
-            Point3dCollection result = new Point3dCollection();
-            // Polyline3d
-            if (curve is Polyline3d poly3d)
+            var result = new Point3dCollection();
+            switch (curve)
             {
-                var type = poly3d.PolyType;
-                foreach (ObjectId v3dId in poly3d) if (t.Exists(v3dId)
-                    && t.TryGet(v3dId, out PolylineVertex3d vertex) && vertex != null)
-                {
-                    if (type == Poly3dType.SimplePoly && vertex.VertexType == Vertex3dType.SimpleVertex)
-                        result.Add(vertex.Position);
-                    else if ((type == Poly3dType.CubicSplinePoly || type == Poly3dType.QuadSplinePoly)
-                    && vertex.VertexType != Vertex3dType.ControlVertex)
-                        result.Add(vertex.Position);
-                }
-            }
-            // Polyline
-            else if (curve is Polyline polyLw)
-            {
-                int n = polyLw.NumberOfVertices;
-                for (int i = 0; i < n; i++)
-                {
-                    var p = polyLw.GetPoint3dAt(i);
-                    result.Add(p);
-                    int j = (i + 1) % n;
-                    if (!polyLw.Closed && i == n - 1) break;
-                    double bulge = polyLw.GetBulgeAt(i);
-                    if (Math.Abs(bulge) > 1E-5)
+                case Polyline3d poly3d:
+                    var t3d = poly3d.PolyType;
+                    foreach (ObjectId v3dId in poly3d) if (t.Exists(v3dId)
+                        && t.TryGet(v3dId, out PolylineVertex3d vertex) && vertex != null)
                     {
-                        Point3d pB = polyLw.GetPoint3dAt(j);
-                        ArcToVertices(result, BulgeToArc(p, pB, bulge));
+                        if (t3d == Poly3dType.SimplePoly && vertex.VertexType == Vertex3dType.SimpleVertex)
+                            result.Add(vertex.Position);
+                        else if ((t3d == Poly3dType.CubicSplinePoly || t3d == Poly3dType.QuadSplinePoly)
+                        && vertex.VertexType != Vertex3dType.ControlVertex)
+                            result.Add(vertex.Position);
                     }
-                }
-            }
-            // Arc
-            else if (curve is Arc arc)
-                ArcToVertices(result, arc);
-            // Circle
-            else if (curve is Circle circle)
-                ArcToVertices(result, new Arc(
-                    circle.Center, circle.Radius, 0, Math.PI * 2.0));
-            // Legacy polyline, ale může se objevit ještě v některých starších výkresech
-            else if (curve is Polyline2d poly2d)
-            {
-                var type = poly2d.PolyType;
-                foreach (ObjectId v2dId in poly2d) if (t.Exists(v2dId)
-                    && t.TryGet(v2dId, out Vertex2d vertex) && vertex != null)
-                {
-                    if (type == Poly2dType.SimplePoly && vertex.VertexType == Vertex2dType.SimpleVertex)
-                        result.Add(vertex.Position);
-                    // Další druhy 2d polyline neřešíme
-                }
-            }
-            // Spline
-            else if (curve is Spline spline)
-            {
-                if (spline.HasFitData)
-                    for (int i = 0; i < spline.NumFitPoints; i++)
+                    break;
+                case Polyline2d poly2d:
+                    var t2d = poly2d.PolyType;
+                    foreach (ObjectId v2dId in poly2d) if (t.Exists(v2dId)
+                        && t.TryGet(v2dId, out Vertex2d vertex) && vertex != null)
+                    {
+                        if (t2d == Poly2dType.SimplePoly && vertex.VertexType == Vertex2dType.SimpleVertex)
+                            result.Add(vertex.Position);
+                        // Další druhy 2d polyline neřešíme, protože nejsou už podporované
+                    }
+                    break;
+                case Polyline polyLw:
+                    int n = polyLw.NumberOfVertices;
+                    for (int i = 0; i < n; i++)
+                    {
+                        var p = polyLw.GetPoint3dAt(i);
+                        result.Add(p);
+                        int j = (i + 1) % n;
+                        if (!polyLw.Closed && i == n - 1) break;
+                        double bulge = polyLw.GetBulgeAt(i);
+                        if (Math.Abs(bulge) > 1E-5)
+                        {
+                            Point3d pB = polyLw.GetPoint3dAt(j);
+                            ArcToVertices(result, BulgeToArc(p, pB, bulge));
+                        }
+                    }
+                    break;
+                case Arc arc:
+                    ArcToVertices(result, arc);
+                    break;
+                case Circle circle:
+                    ArcToVertices(result, new Arc(circle.Center, circle.Radius, 0, Math.PI * 2.0));
+                    break;
+                case Line line:
+                    result.Add(line.StartPoint);
+                    result.Add(line.EndPoint);
+                    break;
+                case Spline spline:
+                    if (spline.HasFitData) for (int i = 0; i < spline.NumFitPoints; i++)
                         result.Add(spline.GetFitPointAt(i));
-                else
-                    for (int i = 0; i < spline.NumControlPoints; i++)
+                    else for (int i = 0; i < spline.NumControlPoints; i++)
                         result.Add(spline.GetControlPointAt(i));
-            }
-            // Line
-            else if (curve is Line line)
-            {
-                result.Add(line.StartPoint);
-                result.Add(line.EndPoint);
+                    break;
+                default: break;
             }
             return result;
         }
@@ -219,7 +157,7 @@ namespace BcToolsC.BCad.Commands
             // Výpočet geometrie oblouku z prohnutí (bulge)
             ANGLE angle = ANGLE.FromBulge(bulge);
             double length = a.DistanceTo(b);
-            double radius = (length / 2.0) / Math.Sin(angle / 2.0);
+            double radius = length / 2.0 / Math.Sin(angle / 2.0);
 
             // Střed tětivy 
             var pM = a + (b - a) * 0.5;
@@ -227,7 +165,7 @@ namespace BcToolsC.BCad.Commands
             // Kolmice k tětivě (směr ke středu oblouku)
             var cH = b - a;
             var pE = cH.RotateBy(Math.PI / 2.0, Vector3d.ZAxis).GetNormal();
-            var pS = (length / 2.0) / Math.Tan(angle / 2.0);
+            var pS = length / 2.0 / Math.Tan(angle / 2.0);
 
             // Výpočet úhlů
             Point3d center = (bulge > 0) ? pM + pE * pS : pM - pE * pS;
@@ -252,6 +190,7 @@ namespace BcToolsC.BCad.Commands
 
             // Dynamický počet segmentů
             int segments = (int)Math.Max(2, length / 0.5);
+            segments = Math.Max(3, Math.Min(segments, 100));
             double startAng = arc.StartAngle;
             double endAng = arc.EndAngle;
             if (endAng < startAng) endAng += Math.PI * 2.0;
@@ -269,31 +208,9 @@ namespace BcToolsC.BCad.Commands
             // Soubory používají jak , tak . jako desetinnou čárku
             // pokud by jsme neprováděli konverzi,
             // může se stát že se bude brát pouze číslo za des. čárkou (což je blbost)
+            if (string.IsNullOrWhiteSpace(s)) return 0.0;
             if (double.TryParse(s.Trim().Replace(',', '.'), out double result)) return result;
             return 0.0;
-        }
-
-        static long CountLines(string lsFile)
-        {
-            long result = 0;
-            try
-            {
-                using (var reader = new StreamReader(lsFile))
-                while (reader.ReadLine() != null)
-                    result++;
-            }
-            catch (Exception exception) { }
-            return result;
-        }
- 
-        static T Deserialize<T>(string json)
-        {
-            using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(json)))
-            {
-                var serializer = new DataContractJsonSerializer(typeof(T));
-                if (serializer == null) return default;
-                return (T)serializer.ReadObject(ms);
-            }
         }
 
         byte[] DownloadDataWithProgress(string url, 
@@ -308,47 +225,39 @@ namespace BcToolsC.BCad.Commands
 #pragma warning restore SYSLIB0014 // Type or member is obsolete
                     request.Timeout = (int)(timeout * 1_000);
                     request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
+                    request.ServicePoint.Expect100Continue = false;
                     using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    using (Stream remoteStream = response.GetResponseStream())
+                    using (MemoryStream ms = new MemoryStream())
                     {
                         long size = response.ContentLength;
-                        bool hasSize = size > 0;
                         progress.Start(message);
-                        if (hasSize) progress.SetLimit(100);
-                        using (Stream remoteStream = response.GetResponseStream())
-                        using (MemoryStream ms = new MemoryStream())
+                        if (size > 0) progress.SetLimit(100);
+
+                        byte[] buffer = new byte[8192];
+                        int bytesRead, totalRead = 0, last = 0;
+                        while ((bytesRead = remoteStream.Read(buffer, 0, buffer.Length)) > 0)
                         {
-                            byte[] buffer = new byte[8192];
-                            var totalRead = 0;
-                            var bytesRead = 0;
-                            var last = 0;
-                            while ((bytesRead = remoteStream.Read(buffer, 0, buffer.Length)) > 0)
+                            ms.Write(buffer, 0, bytesRead);
+                            totalRead += bytesRead;
+                            if (size > 0)
                             {
-                                ms.Write(buffer, 0, bytesRead);
-                                totalRead += bytesRead;
-                                if (hasSize)
+                                int curr = (int)((double)totalRead / size * 100);
+                                if (curr > last)
                                 {
-                                    int curr = (int)((double)totalRead / size * 100);
-                                    if (curr > last)
-                                    {
-                                        for (int i = 0; i < curr - last; i++)
-                                            progress.MeterProgress();
-                                        last = curr;
+                                    for (int i = 0; i < curr - last; i++)
+                                        progress.MeterProgress();
+                                    last = curr;
 #pragma warning disable CA1416 // Validate platform compatibility
-                                        System.Windows.Forms.Application.DoEvents();
+                                    System.Windows.Forms.Application.DoEvents();
 #pragma warning restore CA1416 // Validate platform compatibility
-                                    }
                                 }
                             }
-                            progress.Stop();
-                            return ms.ToArray();
                         }
+                        return ms.ToArray();
                     }
-                }
-                catch (Exception)
-                {
-                    progress.Stop();
-                    return null;
-                }
+                } catch { return null; } 
+                finally { progress.Stop(); }
             }
         }
 
@@ -360,6 +269,30 @@ namespace BcToolsC.BCad.Commands
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36";
                 return wc.DownloadString(url);
             }
+        }
+
+        static bool TryFetchAtomic(string theme,
+            __4326 wgs84,
+            out AtomicEntries response)
+        {
+            response = null;
+            try
+            {
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+                    theme, wgs84.L, wgs84.B);
+                Console.WriteLine(url);
+                string json = DownloadString(url);
+                if (string.IsNullOrWhiteSpace(json)) throw new Exception("Prázdná odpověď serveru.");
+                using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AtomicEntries));
+                    if (serializer == null) return default;
+                    response = (AtomicEntries)serializer.ReadObject(ms);
+                }
+            } catch { return false; }
+            if (response?.Entries != null && response.Entries.Count > 0)
+                return true;
+            return false;
         }
 
         static bool TryUnzipData(byte[] data, string dir, string prefferedExtension,
@@ -411,8 +344,7 @@ namespace BcToolsC.BCad.Commands
                         }
                     }
                 }
-            }
-            catch (Exception exception)
+            } catch (Exception exception)
             { Console.WriteLine(exception.Message); }
             return !string.IsNullOrEmpty(anyFile);
         }
@@ -451,16 +383,16 @@ namespace BcToolsC.BCad.Commands
         static string GetKeywordFromPrompt(Editor editor, string prompt,
             params string[] argv)
         {
-            if (argv.Length == 0) return null;
-            PromptKeywordOptions format = new PromptKeywordOptions($"\n{prompt}: ") { AllowNone = false, };
+            if (argv == null || argv.Length == 0) return null;
+            PromptKeywordOptions options = new PromptKeywordOptions($"\n{prompt}: ") { AllowNone = false };
             for (int i = 0; i < argv.Length; i++)
             {
-                if (i > __chars.Length) break;
-                string k = __chars[i] + argv[i];
+                if (i >= __chars.Length) break;
                 // Nahrazujeme mezery dočastnou neviditelnou mezerou, aby se výběr neořezal před mezerou
-                format.Keywords.Add(k.Replace(" ", "\u3164"));
+                string k = __chars[i] + argv[i].Replace(" ", "\u3164");
+                options.Keywords.Add(k);
             }
-            PromptResult evResult = editor.GetKeywords(format);
+            PromptResult evResult = editor.GetKeywords(options);
             if (evResult.Status != PromptStatus.OK) return null;
             return evResult.StringResult.Substring(1).Replace("\u3164", " ");
         }
@@ -503,11 +435,10 @@ namespace BcToolsC.BCad.Commands
 
         static __4326 GetWGS84FromPoint(Point3d point)
         {
-            // S-JTSK pracuje v opačném kvadrantu, proto jsou tyto data prohozeny.
+            // S-JTSK pracuje v opačném kvadrantu, proto jsou tyto data prohozeny
             double x = point.Y;
             double y = point.X;
             double z = point.Z;
-            Console.WriteLine($"JTSK_X: {x}, JTSK_Y: {y}");
             __4326 epsg;
             if (z > 0)
                 epsg = SJTSK_WGS84(x, y, z);
@@ -659,8 +590,7 @@ namespace BcToolsC.BCad.Commands
         {
             var envelope = BcApp.Envelope;
             // Transformace do správného souřadnicového systému
-            Matrix3d transform = editor.CurrentUserCoordinateSystem;
-            point = __point.TransformBy(transform);
+            point = __point.TransformBy(editor.CurrentUserCoordinateSystem);
             var min = envelope.MinPoint;
             var max = envelope.MaxPoint;
             bool inside = point.X > min.X && point.X < max.X &&
@@ -706,9 +636,9 @@ namespace BcToolsC.BCad.Commands
 
         static bool TryZoomToExtents(Editor editor, Extents3d? __extents)
         {
+            if (__extents == null) return false;
             try
             {
-                if (__extents == null) return false;
                 var extents = __extents.Value;
                 using (ViewTableRecord view = editor.GetCurrentView())
                 {
@@ -725,9 +655,7 @@ namespace BcToolsC.BCad.Commands
                     double h = max.Y - min.Y;
 
                     // Zobrazované entity jsou příliš malé
-                    if (w <= Tolerance.Global.EqualPoint ||
-                        h <= Tolerance.Global.EqualPoint)
-                        return false;
+                    if (w < 1E-5 || h < 1E-5) return false;
 
                     // Korekce poměru stran okna
                     double viewAspect = view.Width / view.Height;
@@ -768,5 +696,21 @@ namespace BcToolsC.BCad.Commands
                 return rlPath;
             return null;
         }
+
+#if !NET45
+        static bool GetIntersectionArea(Geometry polygon, Geometry ring,
+            out Geometry intersection, out double area)
+        {
+            intersection = null;
+            area = default;
+            if (ring.Covers(polygon)) return true;
+            var inside = ring.Intersects(polygon);
+            if (!inside) return false;
+            intersection = polygon.Intersection(ring);
+            if (intersection == null || intersection.IsEmpty) return false;
+            Console.WriteLine(intersection.Area);
+            return inside;
+        }
+#endif
     }
 }
