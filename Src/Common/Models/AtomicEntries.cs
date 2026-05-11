@@ -1,7 +1,7 @@
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Runtime.Serialization;
 
-namespace BcToolsC.BCad.Commands.Models
+namespace BcToolsC.Models
 {
     [DataContract]
     public sealed class AtomicEntries

@@ -21,7 +21,7 @@ using Autodesk.AutoCAD.EditorInput;
 
 using static BcToolsC.BCad.Transactions.BCadTransaction;
 using BcToolsC.BCad.Transactions;
-using BcToolsC.BCad.Commands.Models;
+using BcToolsC.Models;
 
 namespace BcToolsC.BCad.Commands
 {
@@ -61,7 +61,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(editor, "ORTOFOTO", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, "ORTOFOTO", wgs84))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -138,7 +138,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(editor, theme, wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, theme, wgs84))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;

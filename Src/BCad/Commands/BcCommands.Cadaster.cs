@@ -4,9 +4,6 @@ using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
 using System.Text.RegularExpressions;
-using System.IO.Compression;
-using System.Xml;
-using System.Globalization;
 using System.Windows;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
@@ -27,7 +24,6 @@ using Autodesk.AutoCAD.EditorInput;
 
 using BcToolsC.Models;
 using static BcToolsC.BCad.Transactions.BCadTransaction;
-using BcToolsC.BCad.Commands.Models;
 
 #if !NET45
 using NetTopologySuite.Geometries;
@@ -35,11 +31,11 @@ using NetTopologySuite.Geometries;
 
 namespace BcToolsC.BCad.Commands
 {
+    // https://cuzk.gov.cz/Katastr-nemovitosti/Poskytovani-udaju-z-KN/Ciselniky-ISKN/Ciselniky-k-nemovitosti.aspx
     public partial class BcCommands
     {
-        readonly Regex _knRegex = new Regex(@":\s*(.*?)\s*\[", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        readonly Regex _tnRegex = new Regex(@"[?&]Id=([^&]+)", RegexOptions.Compiled);
-        readonly Dictionary<string, string> Kn_TypeThemeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        static Regex _knRegex = new Regex(@":\s*(.*?)\s*\[", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        static Dictionary<string, string> Kn_TypeThemeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "DXF", "KM-KU-DXF" },
             { "DGN", "KM-KU-DGN" },
@@ -47,76 +43,6 @@ namespace BcToolsC.BCad.Commands
             { "VFK", "KM-KU-VFK" },
             { "SHP", "KM-KU-SHP" },
             { "VKM", "KM-KU-VKM" }
-        };
-
-        readonly string Kn_RuianUri = "https://atom.cuzk.cz/get.ashx?format=json&searchTerms=Rosice%20[583782]&theme=RUIAN-S-K-U&crs=&crs=JTSK";
-
-        // https://atom.cuzk.cz/get.ashx?format=json&searchTerms={0}%20[{1}]&theme=RUIAN-S-K-U&crs=&crs=JTSK
-
-        // Druh pozemku
-        readonly Dictionary<string, string> Kn_LandTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            // https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Hopgarden", "chmelnice" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Vineyard", "vinice" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Garden", "zahrada" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Orchard", "ovocný sad" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Grassland", "trvalý travní porost" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Forest", "lesní půda bez rozlišení porostu" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Park", "park, okrasná zahrada" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/InfertileLand", "neplodná půda" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/RuinsYard", "zbořeniště, společný dvůr" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/SurfaceMining", "povrchová těžba nerostů a surovin" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Watercourse", "vodní tok širší než 2 m" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/WaterArea", "vodní nádrž, rybník" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Swamp", "močál, bažina" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeSymbolValue/Graveyard", "hřbitov" },
-            // https://services.cuzk.gov.cz/registry/codelist/LandTypeValue
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/ArableGround", "orná půda" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/Hopgarden", "chmelnice" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/Vineyard", "vinice" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/Garden", "zahrada" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/Orchard", "ovocný sad" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/Grassland", "trvalý travní porost" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/Forest", "lesní pozemek" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/WaterArea", "vodní plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/BuiltUpArea", "zastavěná plocha a nádvoří" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandTypeValue/OtherArea", "ostatní plocha" }
-        };
-
-        // Způsob využití
-        readonly Dictionary<string, string> Kn_LandUsesMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            // https://services.cuzk.gov.cz/registry/codelist/LandUseValue
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Greenhouse", "skleník, pařeniště" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/ForestTreeNursery", "školka" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/TreePlantation", "plantáž dřevin" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/NonProductionForest", "les jiný než hospodářský" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/ForestedAreaWithBuilding", "lesní pozemek, na kterém je budova" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Pond", "rybník" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/NaturalWatercourse", "koryto vodního toku přirozené nebo upravené" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/ArtificialWatercourse", "koryto vodního toku umělé" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/NaturalWaterTank", "vodní nádrž přírodní" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/ArtificialWaterTank", "vodní nádrž umělá" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/WaterloggedArea", "zamokřená plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/SharedYard", "společný dvůr" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Ruins", "zbořeniště" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Railway", "dráha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Highway", "dálnice" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Road", "silnice" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/OtherRoads", "ostatní komunikace" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/OtherTrafficAreas", "ostatní dopravní plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Greenery", "zeleň" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/RecreationArea", "sportoviště a rekreační plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Cemetery", "hřbitov, urnový háj" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/CulturalArea", "kulturní a osvětová plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/HandlingArea", "manipulační plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/MiningArea", "dobývací prostor" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/Dump", "skládka" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/OtherArea", "jiná plocha" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/InfertileLand", "neplodná půda" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/WaterSurfaceWithBuilding", "vodní plocha, na které je budova" },
-            { "https://services.cuzk.gov.cz/registry/codelist/LandUseValue/PhotovoltaicPowerPlant", "fotovoltaická elektrárna" }
         };
 
         [AcRun.CommandMethod("BCTOOLSC_KN_VR")]
@@ -142,7 +68,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(editor, "ZABAGED-vyskopis-DGN", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, "ZABAGED-vyskopis-DGN", wgs84))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -200,7 +126,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(editor, "CPX", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, "CPX", wgs84))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -217,7 +143,7 @@ namespace BcToolsC.BCad.Commands
                 editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                 return;
             }
-            var parcels = ListParcel(data);
+            var parcels = AcDbParcel.ListParcelZip(data);
             // Kontrola jestli jsme vevnitř
             AcDbParcel parcel = null;
             for (int i = 0; i < parcels.Count; i++)
@@ -272,7 +198,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(editor, "KM-KU-DXF", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, "KM-KU-DXF", wgs84))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -338,7 +264,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(editor, theme, wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, theme, wgs84))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -457,7 +383,7 @@ namespace BcToolsC.BCad.Commands
             var b = GetWGS84FromPoint(new Point3d(bbox.MaxX, bbox.MaxY, 0));
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomicWithExtents(editor, "CPX", a, b, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, out AtomicEntries response, "CPX", a, b))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -474,7 +400,7 @@ namespace BcToolsC.BCad.Commands
                 editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
                 return;
             }
-            var parcels = ListParcel(data);
+            var parcels = AcDbParcel.ListParcelZip(data);
             var size = parcels.Count;
             if (size == 0)
             {
@@ -501,15 +427,17 @@ namespace BcToolsC.BCad.Commands
                         System.Windows.Forms.Application.DoEvents();
 #pragma warning restore CA1416 // Validate platform compatibility
                     }
-                    var n = p.Geometry.Count;
-                    if (n < 3) continue;
-                    var tmp = new CoordinateList(p.Geometry.Count);
-                    foreach (var v in p.Geometry)
-                    tmp.Add(new Coordinate(v.X, v.Y));
+                    int rows = p.Geometry.GetLength(0);
+                    if (rows < 3) continue;
+                    int cols = p.Geometry.GetLength(1);
+                    if (cols < 2) continue;
+                    var tmp = new CoordinateList(rows);
+                    for (int j = 0; j < rows; j++)
+                        tmp.Add(new Coordinate(p.Geometry[i, 0], p.Geometry[i, 1]));
 
                     // Oblast musí být uzavřena
                     Coordinate fst = tmp[0];
-                    Coordinate lst = tmp[n - 1];
+                    Coordinate lst = tmp[rows - 1];
                     if (!fst.Equals2D(lst))
                     tmp.Add(new Coordinate(fst.X, fst.Y));
                     if (tmp.Count < 4) continue;
@@ -520,7 +448,7 @@ namespace BcToolsC.BCad.Commands
                         parcel = factory.CreatePolygon(x9);
                         if (!parcel.IsValid)
                             parcel = (Polygon)parcel.Buffer(0);
-                    } catch { Console.WriteLine($"error [{p.Zuid}/{p.Puid}]:" + string.Join(" ", tmp.Select(s => $"{s.X} {s.Y}"))); continue; }
+                    } catch { Console.WriteLine($"Error [{p.Zuid}/{p.Puid}]:" + string.Join(" ", tmp.Select(s => $"{s.X} {s.Y}"))); continue; }
                     if (parcel is null || !parcel.IsValid
                         || !parcel.EnvelopeInternal.Intersects(polygon.EnvelopeInternal)
                         || !scope.Intersects(parcel))
@@ -534,195 +462,6 @@ namespace BcToolsC.BCad.Commands
                 progress.Stop();
             }
 #endif
-        }
-
-        private List<AcDbParcel> ListParcel(byte[] data)
-        {
-            var result = new List<AcDbParcel>();
-            if (data == null || data.Length == 0) return result;
-            try
-            {
-                using (var ms = new MemoryStream(data, writable: false))
-                using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, leaveOpen: false))
-                {
-                    var zipEntry = archive.Entries?.FirstOrDefault(e => !string.IsNullOrEmpty(e.Name) &&
-                         e.Name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase));
-                    if (zipEntry == null) return result;
-                    using (var stream = zipEntry.Open())
-                    using (var xmlReader = XmlReader.Create(stream, new XmlReaderSettings
-                    {
-                        IgnoreComments = true,
-                        IgnoreWhitespace = true,
-                    }))
-                    {
-                        while (xmlReader.Read())
-                        {
-                            if (xmlReader.NodeType == XmlNodeType.Element && xmlReader.LocalName == "CadastralParcel")
-                            {
-                                var parcel = ReadParcel(xmlReader);
-                                if (parcel != null && parcel.Area != 0)
-                                    result.Add(parcel);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception exception)
-            { Console.WriteLine(exception.Message); }
-            return result;
-        }
-
-        private AcDbParcel ReadParcel(XmlReader xmlReader)
-        {
-            var parcel = new AcDbParcel(xmlReader.GetAttribute("id", "http://www.opengis.net/gml/3.2"));
-
-            const GmlGeometryContext kMask = GmlGeometryContext.referencePoint | GmlGeometryContext.Point;
-            const GmlGeometryContext lMask = GmlGeometryContext.geometry
-                | GmlGeometryContext.Polygon
-                | GmlGeometryContext.exterior
-                | GmlGeometryContext.LinearRing;
-            var m = GmlGeometryContext.None;
-            using (XmlReader reader = xmlReader.ReadSubtree())
-            {
-                while (reader.Read())
-                {
-                    if (reader.NodeType == XmlNodeType.EndElement)
-                    {
-                        switch (reader.LocalName)
-                        {
-                            case "geometry": m &= ~GmlGeometryContext.geometry; break;
-                            case "Polygon": m &= ~GmlGeometryContext.Polygon; break;
-                            case "exterior": m &= ~GmlGeometryContext.exterior; break;
-                            case "LinearRing": m &= ~GmlGeometryContext.LinearRing; break;
-                            case "referencePoint": m &= ~GmlGeometryContext.referencePoint; break;
-                            case "Point": m &= ~GmlGeometryContext.Point; break;
-                        }
-                        continue;
-                    }
-                    if (reader.NodeType != XmlNodeType.Element) continue;
-                    switch (reader.LocalName)
-                    {
-                        // Point
-                        case "referencePoint": m |= GmlGeometryContext.referencePoint; break;
-                        case "Point":
-                            if (m.HasFlag(GmlGeometryContext.referencePoint)) 
-                                m |= GmlGeometryContext.Point;
-                            break;
-                        case "pos":
-                            if ((m & kMask) != kMask)
-                            {
-                                reader.Skip();
-                                continue;
-                            }
-                            string pos = reader.ReadElementContentAsString();
-                            if (string.IsNullOrEmpty(pos)) break;
-                            string[] posEntries = pos.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                            if (posEntries.Length != 2) break;
-                            parcel.Point = new Point2d(
-                                double.Parse(posEntries[0], CultureInfo.InvariantCulture),
-                                double.Parse(posEntries[1], CultureInfo.InvariantCulture));
-                            break;
-                        // Geometry
-                        case "geometry": m |= GmlGeometryContext.geometry; break;
-                        case "Polygon":
-                            if (m.HasFlag(GmlGeometryContext.geometry))
-                                m |= GmlGeometryContext.Polygon;
-                            break;
-                        case "exterior":
-                            if (m.HasFlag(GmlGeometryContext.Polygon))
-                                m |= GmlGeometryContext.exterior;
-                            break;
-                        case "LinearRing":
-                            if (m.HasFlag(GmlGeometryContext.exterior))
-                                m |= GmlGeometryContext.LinearRing;
-                            break;
-                        case "posList":
-                            if ((m & lMask) != lMask)
-                            {
-                                reader.Skip();
-                                continue;
-                            }
-                            string posList = reader.ReadElementContentAsString();
-                            if (string.IsNullOrEmpty(posList)) break;
-                            string[] posListEntries = posList.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                            // Validace jestli má parcela dostatek bodů pro vytvoření uzavřeného polygonu
-                            int n = posListEntries.Length;
-                            if (n % 2 != 0)
-                            {
-                                Console.WriteLine($"Debug; Parcela nemá sudý počet souřadnic.");
-                                continue;
-                            }
-                            int j = 0;
-                            for (int i = 0; i + 1 < posListEntries.Length; i += 2)
-                            {
-                                parcel.Geometry.Add(new Point2d(
-                                    double.Parse(posListEntries[i], CultureInfo.InvariantCulture),
-                                    double.Parse(posListEntries[i + 1], CultureInfo.InvariantCulture)));
-                                j++;
-                            }
-                            break;
-                        // Land
-                        case "landType":
-                            var landType = reader.GetAttribute("xlink:href");
-                            if (string.IsNullOrEmpty(landType)) parcel.Land = "ostatní plocha";
-                            else
-                            {
-                                if (Kn_LandTypeMap.TryGetValue(landType, out string land)) parcel.Land = land;
-                                else parcel.Land = "ostatní plocha";
-                            }
-                            break;
-                        // Uses
-                        case "landUse":
-                            var landUse = reader.GetAttribute("xlink:href");
-                            if (string.IsNullOrEmpty(landUse)) break;
-                            if (Kn_LandUsesMap.TryGetValue(landUse, out string uses)) parcel.Uses = uses;
-                            break;
-                        // Town
-                        // Tuid
-                        case "administrativeUnit":
-                            parcel.Town = reader.GetAttribute("xlink:title");
-                            var administrativeUnit = reader.GetAttribute("xlink:href");
-                            if (string.IsNullOrEmpty(administrativeUnit)) break;
-                            var m0 = _tnRegex.Match(administrativeUnit);
-                            if (m0.Success) parcel.Tuid = m0.Groups[1].Value;
-                            break;
-                        // Area
-                        case "areaValue":
-                            parcel.Area = reader.ReadElementContentAsDouble();
-                            break;
-                        // Name
-                        case "label":
-                            parcel.Name = reader.ReadElementContentAsString();
-                            break;
-                        // Zone
-                        case "zoning":
-                            parcel.Zone = reader.GetAttribute("xlink:title");
-                            var zoning = reader.GetAttribute("xlink:href");
-                            if (string.IsNullOrEmpty(zoning)) break;
-                            var m1 = _tnRegex.Match(zoning);
-                            if (m1.Success) parcel.Zuid = m1.Groups[1].Value;
-                            break;
-                        // Buid
-                        case "building":
-                            parcel.Buid = reader.GetAttribute("xlink:title");
-                            break;
-                    }
-                }
-            }
-            return parcel;
-        }
-
-        [Flags]
-        enum GmlGeometryContext 
-            : short
-        {
-            None           = 0,         // 000000
-            geometry       = 1 << 0,    // 000001, cp:geometry
-            Polygon        = 1 << 1,    // 000010, gml:Polygon
-            exterior       = 1 << 2,    // 000100, gml:exterior
-            LinearRing     = 1 << 3,    // 001000, gml:LinearRing
-            referencePoint = 1 << 4, // 010000, cp:referencePoint
-            Point          = 1 << 5     // 100000, gml:Point
         }
     }
 }

@@ -20,9 +20,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Raster.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Krovak.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\BcCommands.Misc.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\models\AcDbParcel.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\models\AtomicEntries.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)commands\models\IntersectedParcel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\models\Mc_AlignTextToCurve.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)commands\models\Pr_Point3dXYComparer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />

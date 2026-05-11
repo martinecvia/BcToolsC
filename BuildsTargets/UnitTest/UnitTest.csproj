@@ -9,9 +9,11 @@
 	<OutputType>Exe</OutputType>
 	<UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
-  <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
   <ItemGroup>
     <Compile Include="Program.cs" />
   </ItemGroup>
+  <Import Project="..\..\Src\Common\Common.projitems" Label="Shared" />
+  <Import Project="..\..\Src\Topology\Topology.projitems" Label="Shared" />
 </Project>

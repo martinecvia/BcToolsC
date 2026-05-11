@@ -12,12 +12,16 @@
     <Compile Include="$(MSBuildThisFileDirectory)Assert.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)helpers\CompressHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\AcDbParcel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\AtomicEntries.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\COLOR.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\CommonOpenFileDialog.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\PathHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)helpers\KrovakHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Helpers\FilePeekHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\ANGLE.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)models\GmlGeometryContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\IntersectedParcel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\LAYER.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)models\Repository.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\SCALE.cs" />

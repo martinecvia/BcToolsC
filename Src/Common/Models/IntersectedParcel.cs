@@ -1,4 +1,4 @@
-namespace BcToolsC.BCad.Commands.Models
+namespace BcToolsC.Models
 {
     public sealed class IntersectedParcel
     {

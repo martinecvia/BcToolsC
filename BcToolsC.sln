@@ -82,6 +82,7 @@ Global
 		Src\Topology\Topology.projitems*{3b4e07f6-eede-4098-8b89-ceb8b06016e5}*SharedItemsImports = 5
 		Src\BCad\BCad.projitems*{64f2a4e1-93ee-47d0-aca0-5fe4ae48f69f}*SharedItemsImports = 13
 		Src\Common\Common.projitems*{71665693-6ea4-4ed7-a37b-a54d884edd76}*SharedItemsImports = 5
+		Src\Topology\Topology.projitems*{71665693-6ea4-4ed7-a37b-a54d884edd76}*SharedItemsImports = 5
 		Src\Common\Common.projitems*{722a50b8-8225-45f0-b14c-493935397047}*SharedItemsImports = 13
 		Src\Topology\Topology.projitems*{b71445c8-b7a7-4660-9e89-245cc4ae9761}*SharedItemsImports = 13
 		RibbonXml\Shared\Shared.projitems*{d5e9d16b-e92e-4caa-961c-567ab67f71d1}*SharedItemsImports = 5

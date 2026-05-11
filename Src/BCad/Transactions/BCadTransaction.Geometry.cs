@@ -115,7 +115,7 @@ namespace BcToolsC.BCad.Transactions
             }
         }
 
-        private IEnumerable<Point2d> ConvertToPoint(double[,] vertexes)
+        public IEnumerable<Point2d> ConvertToPoint(double[,] vertexes)
         {
             if (vertexes == null) yield break;
             int rows = vertexes.GetLength(0);

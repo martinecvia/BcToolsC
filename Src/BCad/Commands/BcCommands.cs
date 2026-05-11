@@ -27,7 +27,6 @@ using BcToolsC.Models;
 using static BcToolsC.Helpers.KrovakHelper;
 using static BcToolsC.Helpers.CompressHelper;
 using BcToolsC.BCad.Transactions;
-using BcToolsC.BCad.Commands.Models;
 
 #if !NET45
 using NetTopologySuite.Geometries;
@@ -40,30 +39,42 @@ namespace BcToolsC.BCad.Commands
     {
         const string __chars = "abcdefghijklmnopqrstuvwxyz";
 
-        static bool IsPointInPolygon(Point3d point, List<Point2d> polygon)
+        static bool IsPointInPolygon(Point3d point, double[,] polygon)
         {
-            if (polygon == null || polygon.Count < 3) return false;
+            if (polygon == null) return false;
+            var rows = polygon.GetLength(0);
+            if (rows < 3) return false;
+            var cols = polygon.GetLength(1);
+            if (cols < 2) return false;
+            double minX = polygon[0, 0], maxX = polygon[0, 0];
+            double minY = polygon[0, 1], maxY = polygon[0, 1];
 
-            double minX = polygon[0].X, maxX = polygon[0].X;
-            double minY = polygon[0].Y, maxY = polygon[0].Y;
-
-            foreach (Point2d p in polygon)
+            for (int i = 0; i < rows; i++)
             {
-                minX = Math.Min(p.X, minX); maxX = Math.Max(p.X, maxX);
-                minY = Math.Min(p.Y, minY); maxY = Math.Max(p.Y, maxY);
+                double x = polygon[i, 0];
+                double y = polygon[i, 1];
+
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
             }
 
-            if (point.X < minX || point.X > maxX || point.Y < minY || point.Y > maxY) return false;
+            if (point.X < minX || point.X > maxX || 
+                point.Y < minY || point.Y > maxY) 
+                return false;
 
             // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
             bool inside = false;
-            for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
+            for (int i = 0, j = rows - 1; i < rows; j = i++)
             {
-                if (((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y)) &&
-                    (point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X))
-                {
+                double xi = polygon[i, 0];
+                double yi = polygon[i, 1];
+                double xj = polygon[j, 0];
+                double yj = polygon[j, 1];
+
+                if (((yi > point.Y) != (yj > point.Y)) && (point.X < (xj - xi) * (point.Y - yi) / (yj - yi) + xi))
                     inside = !inside;
-                }
             }
             return inside;
         }
@@ -196,7 +207,7 @@ namespace BcToolsC.BCad.Commands
             return 0.0;
         }
 
-        byte[] DownloadDataWithProgress(string url, 
+        public static byte[] DownloadDataWithProgress(string url, 
             double timeout = 30.0, string message = "Stahuji data ...")
         {
             using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
@@ -254,16 +265,13 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        static bool TryFetchAtomic(Editor editor, string theme,
-            __4326 wgs84,
-            out AtomicEntries response)
+        static bool TryFetchAtomic(Editor editor, string url, out AtomicEntries response)
         {
             response = null;
-            editor?.Info("Český úřad zeměměřický a katastrální, , tel: +420 284 044 455 , e-mail: cuzk.helpdesk@cuzk.gov.cz");
+            // https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx
+            editor?.Info("Český úřad zeměměřický a katastrální, , tel: +420 284 044 455 , e-mail: cuzk.helpdesk@cuzk.gov.cz, licence: Creative Commons CC-BY 4.0, ");
             try
             {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
-                    theme, wgs84.L, wgs84.B);
                 Console.WriteLine(url);
                 string json = DownloadString(url);
                 if (string.IsNullOrWhiteSpace(json)) throw new Exception("Prázdná odpověď serveru.");
@@ -273,37 +281,26 @@ namespace BcToolsC.BCad.Commands
                     if (serializer == null) return default;
                     response = (AtomicEntries)serializer.ReadObject(ms);
                 }
-            } catch { return false; }
+            }  catch { return false; }
             if (response?.Entries != null && response.Entries.Count > 0)
                 return true;
             return false;
         }
 
-        static bool TryFetchAtomicWithExtents(Editor editor, string theme,
-            __4326 a, __4326 b,
-            out AtomicEntries response)
-        {
-            response = null;
-            editor?.Info("Český úřad zeměměřický a katastrální, , tel: +420 284 044 455 , e-mail: cuzk.helpdesk@cuzk.gov.cz");
-            try
-            {
-                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{3},{4}",
-                    theme, a.L, a.B, b.L, b.B);
-                Console.WriteLine(url);
-                string json = DownloadString(url);
-                if (string.IsNullOrWhiteSpace(json)) throw new Exception("Prázdná odpověď serveru.");
-                using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(json)))
-                {
-                    var serializer = new DataContractJsonSerializer(typeof(AtomicEntries));
-                    if (serializer == null) return default;
-                    response = (AtomicEntries)serializer.ReadObject(ms);
-                }
-            }
-            catch { return false; }
-            if (response?.Entries != null && response.Entries.Count > 0)
-                return true;
-            return false;
-        }
+        static bool TryFetchAtomic(Editor editor, out AtomicEntries response,
+            string town, int tuid)
+            => TryFetchAtomic(editor, string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms={0}%20[{1}]&theme=RUIAN-S-K-U&crs=&crs=JTSK",
+               town, tuid), out response);
+
+        static bool TryFetchAtomic(Editor editor, out AtomicEntries response,
+            string theme, __4326 wgs84) 
+            => TryFetchAtomic(editor, string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
+               theme, wgs84.L, wgs84.B), out response);
+
+        static bool TryFetchAtomic(Editor editor, out AtomicEntries response,
+            string theme, __4326 a, __4326 b)
+            => TryFetchAtomic(editor, string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{3},{4}",
+               theme, a.L, a.B, b.L, b.B), out response);
 
         static bool TryUnzipData(byte[] data, string dir, string prefferedExtension,
             out string anyFile)
