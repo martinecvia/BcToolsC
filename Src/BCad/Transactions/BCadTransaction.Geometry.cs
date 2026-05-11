@@ -105,7 +105,7 @@ namespace BcToolsC.BCad.Transactions
             return result;
         }
 
-        public IEnumerable<Point2d> ConvertToPoint(Point2dCollection vertexes)
+        public IEnumerable<Point2d> ConvertToPoint(List<Point2d> vertexes)
         {
             if (vertexes == null) yield break;
             for(int i = 0; i < vertexes.Count; i++)

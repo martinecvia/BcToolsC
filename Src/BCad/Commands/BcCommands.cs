@@ -40,7 +40,7 @@ namespace BcToolsC.BCad.Commands
     {
         const string __chars = "abcdefghijklmnopqrstuvwxyz";
 
-        static bool IsPointInPolygon(Point3d point, Point2dCollection polygon)
+        static bool IsPointInPolygon(Point3d point, List<Point2d> polygon)
         {
             if (polygon == null || polygon.Count < 3) return false;
 
@@ -254,11 +254,12 @@ namespace BcToolsC.BCad.Commands
             }
         }
 
-        static bool TryFetchAtomic(string theme,
+        static bool TryFetchAtomic(Editor editor, string theme,
             __4326 wgs84,
             out AtomicEntries response)
         {
             response = null;
+            editor?.Info("Český úřad zeměměřický a katastrální, , tel: +420 284 044 455 , e-mail: cuzk.helpdesk@cuzk.gov.cz");
             try
             {
                 string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{1},{2}",
@@ -273,6 +274,32 @@ namespace BcToolsC.BCad.Commands
                     response = (AtomicEntries)serializer.ReadObject(ms);
                 }
             } catch { return false; }
+            if (response?.Entries != null && response.Entries.Count > 0)
+                return true;
+            return false;
+        }
+
+        static bool TryFetchAtomicWithExtents(Editor editor, string theme,
+            __4326 a, __4326 b,
+            out AtomicEntries response)
+        {
+            response = null;
+            editor?.Info("Český úřad zeměměřický a katastrální, , tel: +420 284 044 455 , e-mail: cuzk.helpdesk@cuzk.gov.cz");
+            try
+            {
+                string url = string.Format("https://atom.cuzk.cz/get.ashx?format=json&searchTerms=&theme={0}&crs=JTSK&bbox={1},{2},{3},{4}",
+                    theme, a.L, a.B, b.L, b.B);
+                Console.WriteLine(url);
+                string json = DownloadString(url);
+                if (string.IsNullOrWhiteSpace(json)) throw new Exception("Prázdná odpověď serveru.");
+                using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(AtomicEntries));
+                    if (serializer == null) return default;
+                    response = (AtomicEntries)serializer.ReadObject(ms);
+                }
+            }
+            catch { return false; }
             if (response?.Entries != null && response.Entries.Count > 0)
                 return true;
             return false;

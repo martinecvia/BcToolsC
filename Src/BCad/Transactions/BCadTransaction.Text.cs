@@ -87,7 +87,7 @@ namespace BcToolsC.BCad.Transactions
             return result;
         }
 
-        private ObjectId EnsureTextStyle(string name)
+        public ObjectId EnsureTextStyle(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 name = "Standard";

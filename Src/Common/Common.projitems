@@ -64,6 +64,9 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_ucs_32.ico" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_parcelex_32.ico" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\67a4d7bf584b9ac23b72aba647ad819a.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\csv.png" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_survey_16.ico" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Resources\Icons\rp_ortofoto_32.png" />
     <Content Include="$(MSBuildThisFileDirectory)Resources\Icons\Src\WRTO24.2024.TISN69.jpg" />

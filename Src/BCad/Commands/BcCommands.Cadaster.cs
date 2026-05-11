@@ -1,3 +1,4 @@
+#pragma warning disable CS8600, CS8601
 using System; // Keep for .NET 4.6
 using System.IO; // Keep for .NET 4.6
 using System.Collections.Generic; // Keep for .NET 4.6
@@ -47,6 +48,10 @@ namespace BcToolsC.BCad.Commands
             { "SHP", "KM-KU-SHP" },
             { "VKM", "KM-KU-VKM" }
         };
+
+        readonly string Kn_RuianUri = "https://atom.cuzk.cz/get.ashx?format=json&searchTerms=Rosice%20[583782]&theme=RUIAN-S-K-U&crs=&crs=JTSK";
+
+        // https://atom.cuzk.cz/get.ashx?format=json&searchTerms={0}%20[{1}]&theme=RUIAN-S-K-U&crs=&crs=JTSK
 
         // Druh pozemku
         readonly Dictionary<string, string> Kn_LandTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -137,7 +142,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic("ZABAGED-vyskopis-DGN", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, "ZABAGED-vyskopis-DGN", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -195,7 +200,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic("CPX", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, "CPX", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -230,6 +235,7 @@ namespace BcToolsC.BCad.Commands
                 return;
             }
             Call(t => t.AddLWPolyline(t.ConvertToPoint(parcel.Geometry), color: 1));
+            editor.Info($"https://vdp.cuzk.gov.cz/vdp/ruian/parcely/{parcel.Puid.Substring(4)}");
             MessageBox.Show(
                 $"Obec: {parcel.Town} {parcel.Tuid}\n" +
                 $"Katastrální území: {parcel.Zone} {parcel.Zuid}\n" +
@@ -266,7 +272,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic("KM-KU-DXF", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, "KM-KU-DXF", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -332,7 +338,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(theme, wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, theme, wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -376,6 +382,160 @@ namespace BcToolsC.BCad.Commands
             editor.Ok("Ok; Soubory uloženy do: " + dialog.ResultPath);
         }
 
+        [AcRun.CommandMethod("BCTOOLSC_KN_AN")]
+        public void Kn_ExportParcel()
+        {
+            if (!BcApp.IsAppProperlyInitialized) return;
+            AcApp.Document document = BcApp.Document;
+            Database db = document.Database;
+            Editor editor = document.Editor;
+            if (!ValidateAppVersion(editor)) return;
+#if !NET45
+            if (!ValidateModelSpace(editor, db)) return;
+            // Získání vstupu od uživatele
+            var __curve = GetEntityFromPrompt(editor, "Vyberte křivku",
+            typeof(Polyline), typeof(Polyline2d), typeof(Polyline3d));
+            if (__curve == ObjectId.Null)
+            {
+                editor.Warn("Výběr byl zrušen uživatelem.");
+                return;
+            }
+            // Vytvoření topology geometrie
+            var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
+            var polygon = Wrap(t =>
+            {
+                if (!t.TryGet(__curve, out Curve curve))
+                {
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return null;
+                }
+                if (curve is Polyline2d) editor.Warn("Křivka je staršího typu Polyline2d; Výsledek nemusí být správný");
+                var vertice = GetPolylineVertices(t, curve).ToList();
+                int n = vertice.Count;
+                if (n < 3)
+                {
+                    editor.Warn("Nebyla nalazena žádná data.");
+                    return null;
+                }
+                Point3d fst = vertice[0];
+                Point3d lst = vertice[n - 1];
+                if (!curve.Closed && !fst.IsEqualTo(lst, Tolerance.Global))
+                {
+                    editor.Warn("Vybraná křivka musí být uzavřená.");
+                    return null;
+                }
+                var tmp = new CoordinateList(n);
+                foreach (var v in vertice)
+                tmp.Add(new Coordinate(v.X, v.Y));
+                if (!tmp[0].Equals2D(tmp[n - 1]))
+                tmp.Add(new Coordinate(tmp[0].X, tmp[0].Y));
+                if (tmp.Count < 4)
+                {
+                    editor.Warn("Vybranou křivku nelze převést na referenci polygonu.");
+                    return null;
+                }
+                Polygon result;
+                try
+                {
+                    var x9 = factory.CreateLinearRing(tmp.ToArray());
+                    result = factory.CreatePolygon(x9);
+                } catch { editor.Warn("Vybranou křivku nelze převést na referenci polygonu."); return null; }
+                return result;
+            });
+
+            if (polygon is null || !polygon.IsValid)
+                return;
+
+            var bbox = polygon.EnvelopeInternal;
+            if (bbox.Height > 5000 || bbox.Width > 5000)
+            {
+                editor.Warn("Oblast přesahuje povolený limit [e=5000]");
+                return;
+            }
+
+            var a = GetWGS84FromPoint(new Point3d(bbox.MinX, bbox.MinY, 0));
+            var b = GetWGS84FromPoint(new Point3d(bbox.MaxX, bbox.MaxY, 0));
+
+            // Stažení dat ze serveru ČÚZK
+            if (!TryFetchAtomicWithExtents(editor, "CPX", a, b, out AtomicEntries response))
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+
+            // Výběr konkrétního mapového listu
+            if (!TrySelectEntry(editor, response, _knRegex, out AtomicEntries.Entry entry))
+                return;
+
+            // Stažení dat
+            byte[] data = DownloadDataWithProgress(entry.Link);
+            if (data == null || data.Length == 0)
+            {
+                editor.Error("Chyba; Nepovedlo se stáhnout data ve stanoveném čase.");
+                return;
+            }
+            var parcels = ListParcel(data);
+            var size = parcels.Count;
+            if (size == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+            var scope = NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(polygon);
+            var intersected = new List<IntersectedParcel>();
+            using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
+            {
+                var last = 0;
+                progress.SetLimit(100);
+                progress.Start("Hledám průsečníky s katastrem ...");
+                for (int i = 0; i < size; i++)
+                {
+                    var p = parcels[i];
+                    int curr = (int)((double)i / size * 100);
+                    if (curr > last)
+                    {
+                        for (int j = 0; j < curr - last; j++)
+                            progress.MeterProgress();
+                        last = curr;
+#pragma warning disable CA1416 // Validate platform compatibility
+                        System.Windows.Forms.Application.DoEvents();
+#pragma warning restore CA1416 // Validate platform compatibility
+                    }
+                    var n = p.Geometry.Count;
+                    if (n < 3) continue;
+                    var tmp = new CoordinateList(p.Geometry.Count);
+                    foreach (var v in p.Geometry)
+                    tmp.Add(new Coordinate(v.X, v.Y));
+
+                    // Oblast musí být uzavřena
+                    Coordinate fst = tmp[0];
+                    Coordinate lst = tmp[n - 1];
+                    if (!fst.Equals2D(lst))
+                    tmp.Add(new Coordinate(fst.X, fst.Y));
+                    if (tmp.Count < 4) continue;
+                    Polygon parcel;
+                    try
+                    {
+                        var x9 = factory.CreateLinearRing(tmp.ToArray());
+                        parcel = factory.CreatePolygon(x9);
+                        if (!parcel.IsValid)
+                            parcel = (Polygon)parcel.Buffer(0);
+                    } catch { Console.WriteLine($"error [{p.Zuid}/{p.Puid}]:" + string.Join(" ", tmp.Select(s => $"{s.X} {s.Y}"))); continue; }
+                    if (parcel is null || !parcel.IsValid
+                        || !parcel.EnvelopeInternal.Intersects(polygon.EnvelopeInternal)
+                        || !scope.Intersects(parcel))
+                        continue;
+                    var intersection = parcel.Intersection(polygon);
+                    double area = intersection.Area;
+                    if (area <= 0) continue;
+                    intersected.Add(new IntersectedParcel(p, area));
+                    Console.WriteLine($"{i};{p.Zone};{p.Name};{p.Puid};{p.Land};{p.Uses};{p.Area};{area}");
+                }
+                progress.Stop();
+            }
+#endif
+        }
+
         private List<AcDbParcel> ListParcel(byte[] data)
         {
             var result = new List<AcDbParcel>();
@@ -415,26 +575,75 @@ namespace BcToolsC.BCad.Commands
         private AcDbParcel ReadParcel(XmlReader xmlReader)
         {
             var parcel = new AcDbParcel(xmlReader.GetAttribute("id", "http://www.opengis.net/gml/3.2"));
+
+            const GmlGeometryContext kMask = GmlGeometryContext.referencePoint | GmlGeometryContext.Point;
+            const GmlGeometryContext lMask = GmlGeometryContext.geometry
+                | GmlGeometryContext.Polygon
+                | GmlGeometryContext.exterior
+                | GmlGeometryContext.LinearRing;
+            var m = GmlGeometryContext.None;
             using (XmlReader reader = xmlReader.ReadSubtree())
             {
                 while (reader.Read())
                 {
+                    if (reader.NodeType == XmlNodeType.EndElement)
+                    {
+                        switch (reader.LocalName)
+                        {
+                            case "geometry": m &= ~GmlGeometryContext.geometry; break;
+                            case "Polygon": m &= ~GmlGeometryContext.Polygon; break;
+                            case "exterior": m &= ~GmlGeometryContext.exterior; break;
+                            case "LinearRing": m &= ~GmlGeometryContext.LinearRing; break;
+                            case "referencePoint": m &= ~GmlGeometryContext.referencePoint; break;
+                            case "Point": m &= ~GmlGeometryContext.Point; break;
+                        }
+                        continue;
+                    }
                     if (reader.NodeType != XmlNodeType.Element) continue;
                     switch (reader.LocalName)
                     {
                         // Point
+                        case "referencePoint": m |= GmlGeometryContext.referencePoint; break;
+                        case "Point":
+                            if (m.HasFlag(GmlGeometryContext.referencePoint)) 
+                                m |= GmlGeometryContext.Point;
+                            break;
                         case "pos":
+                            if ((m & kMask) != kMask)
+                            {
+                                reader.Skip();
+                                continue;
+                            }
                             string pos = reader.ReadElementContentAsString();
-                            if (string.IsNullOrEmpty(pos)) continue;
+                            if (string.IsNullOrEmpty(pos)) break;
                             string[] posEntries = pos.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                            if (posEntries.Length != 2) break;
                             parcel.Point = new Point2d(
                                 double.Parse(posEntries[0], CultureInfo.InvariantCulture),
                                 double.Parse(posEntries[1], CultureInfo.InvariantCulture));
                             break;
                         // Geometry
+                        case "geometry": m |= GmlGeometryContext.geometry; break;
+                        case "Polygon":
+                            if (m.HasFlag(GmlGeometryContext.geometry))
+                                m |= GmlGeometryContext.Polygon;
+                            break;
+                        case "exterior":
+                            if (m.HasFlag(GmlGeometryContext.Polygon))
+                                m |= GmlGeometryContext.exterior;
+                            break;
+                        case "LinearRing":
+                            if (m.HasFlag(GmlGeometryContext.exterior))
+                                m |= GmlGeometryContext.LinearRing;
+                            break;
                         case "posList":
+                            if ((m & lMask) != lMask)
+                            {
+                                reader.Skip();
+                                continue;
+                            }
                             string posList = reader.ReadElementContentAsString();
-                            if (string.IsNullOrEmpty(posList)) continue;
+                            if (string.IsNullOrEmpty(posList)) break;
                             string[] posListEntries = posList.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                             // Validace jestli má parcela dostatek bodů pro vytvoření uzavřeného polygonu
                             int n = posListEntries.Length;
@@ -465,7 +674,7 @@ namespace BcToolsC.BCad.Commands
                         // Uses
                         case "landUse":
                             var landUse = reader.GetAttribute("xlink:href");
-                            if (string.IsNullOrEmpty(landUse)) continue;
+                            if (string.IsNullOrEmpty(landUse)) break;
                             if (Kn_LandUsesMap.TryGetValue(landUse, out string uses)) parcel.Uses = uses;
                             break;
                         // Town
@@ -473,9 +682,9 @@ namespace BcToolsC.BCad.Commands
                         case "administrativeUnit":
                             parcel.Town = reader.GetAttribute("xlink:title");
                             var administrativeUnit = reader.GetAttribute("xlink:href");
-                            if (string.IsNullOrEmpty(administrativeUnit)) continue;
-                            var match = _tnRegex.Match(administrativeUnit);
-                            if (match.Success) parcel.Tuid = match.Groups[1].Value;
+                            if (string.IsNullOrEmpty(administrativeUnit)) break;
+                            var m0 = _tnRegex.Match(administrativeUnit);
+                            if (m0.Success) parcel.Tuid = m0.Groups[1].Value;
                             break;
                         // Area
                         case "areaValue":
@@ -488,6 +697,10 @@ namespace BcToolsC.BCad.Commands
                         // Zone
                         case "zoning":
                             parcel.Zone = reader.GetAttribute("xlink:title");
+                            var zoning = reader.GetAttribute("xlink:href");
+                            if (string.IsNullOrEmpty(zoning)) break;
+                            var m1 = _tnRegex.Match(zoning);
+                            if (m1.Success) parcel.Zuid = m1.Groups[1].Value;
                             break;
                         // Buid
                         case "building":
@@ -497,6 +710,19 @@ namespace BcToolsC.BCad.Commands
                 }
             }
             return parcel;
+        }
+
+        [Flags]
+        enum GmlGeometryContext 
+            : short
+        {
+            None           = 0,         // 000000
+            geometry       = 1 << 0,    // 000001, cp:geometry
+            Polygon        = 1 << 1,    // 000010, gml:Polygon
+            exterior       = 1 << 2,    // 000100, gml:exterior
+            LinearRing     = 1 << 3,    // 001000, gml:LinearRing
+            referencePoint = 1 << 4, // 010000, cp:referencePoint
+            Point          = 1 << 5     // 100000, gml:Point
         }
     }
 }

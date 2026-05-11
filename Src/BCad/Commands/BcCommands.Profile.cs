@@ -177,6 +177,7 @@ namespace BcToolsC.BCad.Commands
                 if (curve.Closed && !reallyClosing) vertice.Add(fst);
                 var pts = CollectVertice(vertice, curve);
                 var cmp = new List<Point3d>();
+                
                 // Vytvoření topology geometrie
                 var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory();
                 var polyline = factory.CreateLineString(vertice.Select(v => new CoordinateZ(v.X, v.Y, v.Z)).ToArray());
@@ -186,7 +187,7 @@ namespace BcToolsC.BCad.Commands
                 {
                     var last = 0;
                     progress.SetLimit(100);
-                    progress.Start("Heldám průsečníky se sítí ...");
+                    progress.Start("Hledám průsečníky se sítí ...");
                     for (int i = 0; i < size; i++)
                     {
                         var f = __faces[i];
@@ -260,7 +261,7 @@ namespace BcToolsC.BCad.Commands
         }
 #endif
 
-        void DrawProfile(BCadTransaction t, Editor editor,
+        static void DrawProfile(BCadTransaction t, Editor editor,
             IEnumerable<Point2d> pts, IEnumerable<List<Point2d>> cmp, 
             double minY, Point2d maxY,
             double dx, double dy, double dl,

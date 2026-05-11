@@ -1,6 +1,6 @@
 using System; // Keep for .NET 4.6
-using System.Collections.Generic; // Keep for .NET 4.6
 using System.Linq; // Keep for .NET 4.6
+using System.Windows;
 
 #region O_PROGRAM_DETERMINE_CAD_PLATFORM
 #if ZWCAD
@@ -42,12 +42,12 @@ namespace BcToolsC.BCad.Commands
 
             long n = db.Handseed.Value / 100L;
             if (n == 0) n = 1;
+            // https://forums.autodesk.com/t5/net-forum/proxyobjects-amp-proxyentities-how-to-find-all/td-p/10867012
+            var i = 0;
             using (AcRun.ProgressMeter progress = new AcRun.ProgressMeter())
             {
                 progress.SetLimit(100);
                 progress.Start("Procházím ...");
-                // https://forums.autodesk.com/t5/net-forum/proxyobjects-amp-proxyentities-how-to-find-all/td-p/10867012
-                var i = 0;
                 Call(t =>
                 {
                     try
@@ -86,13 +86,20 @@ namespace BcToolsC.BCad.Commands
                             }
                             ++l;
                         }
-                    }
-                    catch (Exception)
-                    { }
+                    } catch { }
                 });
                 progress.Stop();
-                editor.Ok("Smazaných proxy objektů: " + i);
             }
+            if (i == 0)
+            {
+                editor.Warn("Nebyla nalazena žádná data.");
+                return;
+            }
+            MessageBox.Show(
+                $"Smazaných objektů: " + i,
+                $"Proxy",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         [AcRun.CommandMethod("BCTOOLSC_MC_AC")]
@@ -238,7 +245,8 @@ namespace BcToolsC.BCad.Commands
                 table.SetSize(rows, cols);
                 table.GenerateLayout();
 
-                table.Cells[0, 0].TextString = "Vytyčení";
+                table.Cells[0, 0].TextString = "Vytycení";
+                table.Cells[0, 0].TextHeight = 3.0 * scale.sY;
                 table.Cells[1, 0].TextString = "n";
                 table.Cells[1, 1].TextString = "Y (m)";
                 table.Cells[1, 2].TextString = "X (m)";
@@ -253,7 +261,24 @@ namespace BcToolsC.BCad.Commands
                     table.Cells[row, 2].TextString = Math.Abs(p.X).ToString("F2"); // X
                     if (hasZ) table.Cells[row, 3].TextString = Math.Abs(p.Z).ToString("F2");
                 }
-                table.TransformBy(Matrix3d.Scaling(scale.sY, point));
+
+                table.Rows[0].Height = 10.0 * scale.sY;
+                table.Rows[1].Height = 10.0 * scale.sY;
+
+                for (int r = 2; r < rows; r++)
+                table.Rows[r].Height = 8.0 * scale.sY;
+
+                table.Columns[0].Width = 10.0 * scale.sY;
+                table.Columns[1].Width = 32.0 * scale.sY;
+                table.Columns[2].Width = 32.0 * scale.sY;
+                if (hasZ)
+                table.Columns[3].Width = 15.0 * scale.sY;
+                for (int r = 1; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                {
+                    table.Cells[r, c].TextHeight = 2.5 * scale.sY;
+                    table.Cells[r, c].Alignment = CellAlignment.MiddleCenter;
+                }
                 t.AddToModelSpace(table);
             });
         }

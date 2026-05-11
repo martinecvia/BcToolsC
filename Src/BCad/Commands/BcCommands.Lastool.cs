@@ -71,7 +71,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic(theme, wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, theme, wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;
@@ -140,7 +140,7 @@ namespace BcToolsC.BCad.Commands
             var wgs84 = GetWGS84FromPoint(point);
 
             // Stažení dat ze serveru ČÚZK
-            if (!TryFetchAtomic("DMR5G-SJTSK", wgs84, out AtomicEntries response))
+            if (!TryFetchAtomic(editor, "DMR5G-SJTSK", wgs84, out AtomicEntries response))
             {
                 editor.Warn("Nebyla nalazena žádná data.");
                 return;

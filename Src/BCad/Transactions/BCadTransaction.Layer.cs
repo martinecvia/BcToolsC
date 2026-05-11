@@ -142,7 +142,7 @@ namespace BcToolsC.BCad.Transactions
             layer.IsHidden = false;
         }
 
-        private ObjectId EnsureLayer(string name)
+        public ObjectId EnsureLayer(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 return Database.LayerZero;
